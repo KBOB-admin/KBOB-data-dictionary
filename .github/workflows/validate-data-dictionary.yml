@@ -57,6 +57,17 @@ jobs:
             --workspace . \
             --workbook-path "${{ steps.workbook.outputs.path }}"
 
+      - name: Publish validation summary in GitHub Actions
+        shell: bash
+        run: |
+          echo "# Validation report" >> "$GITHUB_STEP_SUMMARY"
+          echo >> "$GITHUB_STEP_SUMMARY"
+          echo "Validated workbook: \
+\
+\`${{ steps.workbook.outputs.path }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo >> "$GITHUB_STEP_SUMMARY"
+          cat Validation_output/github_validation_report.md >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload validation artifacts
         uses: actions/upload-artifact@v4
         with:
