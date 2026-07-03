@@ -111,6 +111,15 @@ def _row_has_meaningful_content(row) -> bool:
     return True
 
 
+def _find_validation_data_start(ws, fallback: int, marker_column: int = 2, marker_text: str = "Validierung", scan_limit: int = 25) -> int:
+    marker_text_norm = (marker_text or "").strip().casefold()
+    for row_idx in range(1, min(ws.max_row, scan_limit) + 1):
+        value = _str(ws.cell(row=row_idx, column=marker_column).value)
+        if value and value.strip().casefold() == marker_text_norm:
+            return row_idx + 1
+    return fallback
+
+
 def _row_dicts(ws, header_row: int, data_start: int) -> list[dict[str, object]]:
     headers = [_str(c.value) or "" for c in ws[header_row]]
     out = []
@@ -535,7 +544,7 @@ def load_he_dd_v20260619(path: Path) -> DataDictionary:
 
 
 def _parse_objects_abgeglichen(ws, meta: DictionaryMeta) -> list[DDClass]:
-    rows = _row_dicts(ws, header_row=3, data_start=10)
+    rows = _row_dicts(ws, header_row=3, data_start=_find_validation_data_start(ws, fallback=10))
     base = f"{_lindas_base(meta)}class/"
     classes = []
     for r in rows:
@@ -573,8 +582,8 @@ def _parse_objects_abgeglichen(ws, meta: DictionaryMeta) -> list[DDClass]:
 
 
 def _parse_properties_abgeglichen(ws, value_ws, meta: DictionaryMeta) -> tuple[list[DDProperty], list[DDAllowedValue]]:
-    rows = _row_dicts(ws, header_row=2, data_start=8)
-    value_rows = _row_dicts(value_ws, header_row=3, data_start=10) if value_ws is not None else []
+    rows = _row_dicts(ws, header_row=2, data_start=_find_validation_data_start(ws, fallback=8))
+    value_rows = _row_dicts(value_ws, header_row=3, data_start=_find_validation_data_start(value_ws, fallback=10)) if value_ws is not None else []
     value_map = {}
     for vr in value_rows:
         raw_id = _str(vr.get("Werteliste-ID")) or _str(vr.get("Werte-ID"))
@@ -643,7 +652,7 @@ def _parse_properties_abgeglichen(ws, value_ws, meta: DictionaryMeta) -> tuple[l
 
 def _parse_documents_abgeglichen(ws, meta: DictionaryMeta) -> list[dict]:
     docs = []
-    rows = _row_dicts(ws, header_row=1, data_start=8)
+    rows = _row_dicts(ws, header_row=1, data_start=_find_validation_data_start(ws, fallback=8))
     for row_idx, r in enumerate(rows, start=8):
         document_uri = _str(r.get("GUID/URI")) or _str(r.get("URI"))
         document_identification = _str(r.get("Document-ID")) or _str(r.get("Document-ID\nIdentification"))
@@ -803,7 +812,7 @@ def load_he_dd_v01(path: Path) -> DataDictionary:
     path = Path(path)
     wb = openpyxl.load_workbook(path, data_only=True)
 
-    if {"Classes", "Properties", "Values", "Documents", "Data_Template", "Header", "Dictionary_public", "GroupOfProperties", "Rules"}.issubset(set(wb.sheetnames)):
+    if {"Classes", "Properties", "Values", "Documents", "Data_Template", "Header", "GroupOfProperties", "Rules"}.issubset(set(wb.sheetnames)):
         return load_he_dd_abgeglichen(path)
 
     if {"Objekte", "Werte", "Data Template AreaMgmt", "Dokumente_Dokumentgruppen"}.issubset(set(wb.sheetnames)):

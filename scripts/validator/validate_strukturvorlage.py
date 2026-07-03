@@ -40,7 +40,6 @@ REQUIRED_SHEETS_V20260619 = [
 ]
 REQUIRED_SHEETS_ABGEGLICHEN = [
     'Header',
-    'Dictionary_public',
     'Classes',
     'Properties',
     'Values',
@@ -315,7 +314,7 @@ class Validator:
         return {'Objekte', 'Werte', 'Data Template AreaMgmt'}.issubset(set(self.wb.sheetnames)) and 'Merkmale' in self.wb.sheetnames
 
     def is_abgeglichen_template(self) -> bool:
-        return {'Header', 'Dictionary_public', 'Classes', 'Properties', 'Values', 'Documents', 'Data_Template', 'GroupOfProperties', 'Rules'}.issubset(set(self.wb.sheetnames))
+        return {'Header', 'Classes', 'Properties', 'Values', 'Documents', 'Data_Template', 'GroupOfProperties', 'Rules'}.issubset(set(self.wb.sheetnames))
 
     def validate_required_sheets(self):
         if self.is_abgeglichen_template():
@@ -350,6 +349,16 @@ class Validator:
             if field is not None:
                 rows[str(field).strip()] = (None if value is None else str(value).strip(), i)
         return rows
+
+    def _find_validation_row(self, ws, marker_column: int = 2, marker_text: str = 'Validierung', scan_limit: int = 25) -> int | None:
+        marker = (marker_text or '').strip().casefold()
+        for row_idx in range(1, min(ws.max_row, scan_limit) + 1):
+            value = ws.cell(row=row_idx, column=marker_column).value
+            if value is None:
+                continue
+            if str(value).strip().casefold() == marker:
+                return row_idx
+        return None
 
     def validate_dictionary(self):
         core_sheet, public_sheet = self._dictionary_sheet_names()
@@ -1226,7 +1235,8 @@ class Validator:
             class_sheet = 'Classes' if 'Classes' in self.wb.sheetnames else None
             if class_sheet:
                 cws = self.wb[class_sheet]
-                for ridx, crow in self._iter_data_rows(cws, 8):
+                cws_start = (self._find_validation_row(cws) or 7) + 1
+                for ridx, crow in self._iter_data_rows(cws, cws_start):
                     class_code = self._cell(crow, 9)
                     for col in [12, 13, 14, 15]:
                         value = self._cell(crow, col)
@@ -1238,7 +1248,8 @@ class Validator:
             if 'Properties' in self.wb.sheetnames:
                 pws = self.wb['Properties']
                 p_headers = self._sheet_headers('properties', pws)
-                for ridx, prow in self._iter_data_rows(pws, 8):
+                pws_start = (self._find_validation_row(pws) or 7) + 1
+                for ridx, prow in self._iter_data_rows(pws, pws_start):
                     prop_identifier = self._cell(prow, p_headers.get('Property-Code', p_headers.get('Property-ID', 6)))
                     if not prop_identifier:
                         prop_identifier = self._cell(prow, p_headers.get('Property-ID', 5))
@@ -1254,7 +1265,8 @@ class Validator:
             if group_sheet:
                 gws = self.wb[group_sheet]
                 g_headers = self._sheet_headers('groups', gws)
-                for ridx, grow in self._iter_data_rows(gws, 8):
+                gws_start = (self._find_validation_row(gws) or 7) + 1
+                for ridx, grow in self._iter_data_rows(gws, gws_start):
                     for header_name in ['GoP-Code', 'Designation (EN)', 'Beschreibung (DE)', 'Description (FR)', 'Descrizione (IT)']:
                         val = self._cell(grow, g_headers.get(header_name, 0)) if g_headers.get(header_name, 0) else None
                         norm = self._norm(val)
@@ -1272,6 +1284,9 @@ class Validator:
             property_start_col = property_anchor + 1
             property_end_col = (document_anchor - 1) if document_anchor and document_anchor > property_start_col else ws.max_column
 
+            matrix_validation_row = self._find_validation_row(ws)
+            matrix_data_start = (matrix_validation_row + 1) if matrix_validation_row else 5
+
             property_cols = []
             for col_idx in range(property_start_col, property_end_col + 1):
                 label = self._cell([ws.cell(2, col_idx).value], 1)
@@ -1287,10 +1302,10 @@ class Validator:
                 if not prop_code:
                     display = label or prop_identifier
                     if display:
-                        self.add('error', 'matrix_unknown_property_label', f'Data_Template property reference not found in Properties labels/IDs (DE/EN/FR/IT): {display}', sheet=matrix_sheet, row=2)
+                        self.add('error', 'matrix_unknown_property_label', f'Data_Template property reference not found in Properties labels/IDs (DE/EN/FR/IT): {display}. Bitte sicherstellen, dass die im Data_Template referenzierte Property im Properties-Tab aufgeführt ist.', sheet=matrix_sheet, row=2)
                     continue
                 property_cols.append((col_idx, prop_code, label or prop_identifier))
-            for ridx in range(5, ws.max_row + 1):
+            for ridx in range(matrix_data_start, ws.max_row + 1):
                 row_values = [ws.cell(ridx, c).value for c in range(1, ws.max_column + 1)]
                 if not self._row_has_meaningful_content(row_values):
                     continue
