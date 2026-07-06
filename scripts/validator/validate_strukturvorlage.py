@@ -346,8 +346,17 @@ class Validator:
         for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
             field = row[0] if len(row) > 0 else None
             value = row[1] if len(row) > 1 else None
-            if field is not None:
-                rows[str(field).strip()] = (None if value is None else str(value).strip(), i)
+            if field is None:
+                continue
+            field_text = str(field).strip()
+            if not field_text:
+                continue
+            upper = field_text.upper()
+            if set(field_text) <= {'─', '-', ' '}:
+                continue
+            if upper in {'IDENTIFICATION', 'GOVERNANCE', 'LEGEND', 'GOVERNANCE / PUBLISHING', 'DISCOVERY / CATALOG METADATA', 'DISTRIBUTION / ACCESS'}:
+                continue
+            rows[field_text] = (None if value is None else str(value).strip(), i)
         return rows
 
     def _find_validation_row(self, ws, marker_column: int = 2, marker_text: str = 'Validierung', scan_limit: int = 25) -> int | None:
@@ -498,6 +507,29 @@ class Validator:
             if value:
                 mapping[value] = idx
         return mapping
+
+    def _separator_header_names(self, logical_name: str) -> set[str]:
+        separator_map = {
+            'classes': {'Classes', ' IFC 4.3.2.0 (IFC4X3_ADD2)', 'Governance', 'RelatedDocuments'},
+            'properties': {'Properties', ' IFC 4.3.2.0 (IFC4X3_ADD2)', 'Governance'},
+            'values': {'Enumerations', 'Governance'},
+            'documents': {'Documents', 'Governance'},
+            'groups': {'Group of Properties', 'Governance'},
+            'matrix': {
+                'GoP',
+                'Property - Designation/Bezeichnung/Désignation/Designazione',
+                'Document - Designation/Bezeichnung/Désignation/Designazione',
+                'Dokumente - Bezeichnung/Designation',
+                'LOIN',
+                'Governance',
+            },
+        }
+        return separator_map.get(logical_name, set())
+
+    def _is_separator_column(self, logical_name: str, header_name: str | None) -> bool:
+        if not header_name:
+            return False
+        return str(header_name).strip() in self._separator_header_names(logical_name)
 
     def _current_sheet_names(self) -> dict[str, str | None]:
         return {
@@ -775,7 +807,7 @@ class Validator:
         document_source_codes = {d.get('SourceCode') for d in getattr(dd, 'documents', []) if d.get('SourceCode')}
         document_ids = {d.get('Document Identification') or d.get('Dokument-ID') or d.get('Document-ID') for d in getattr(dd, 'documents', []) if (d.get('Document Identification') or d.get('Dokument-ID') or d.get('Document-ID'))}
         document_name_en_set = {d.get('DocumentName (EN)') or d.get('DocumentName') or d.get('DocumentLabel') for d in getattr(dd, 'documents', []) if (d.get('DocumentName (EN)') or d.get('DocumentName') or d.get('DocumentLabel'))}
-        object_class_allowed = self._load_dropdown_values('Dropdownregeln.Objekt-Einordnung')
+        object_class_allowed = self._load_dropdown_values('Klassifikation') or self._load_dropdown_values('Classification') or self._load_dropdown_values('Dropdownregeln.Objekt-Einordnung')
         status_allowed = self._load_dropdown_values('Dropdownregeln.Status')
         start_row = 10
         for idx, row in self._iter_data_rows(ws, start_row):
@@ -796,7 +828,7 @@ class Validator:
             else:
                 if self.is_abgeglichen_template():
                     obj_id = self._cell(row, headers.get('Class-ID', headers.get('Objekt-ID', 9)))
-                    obj_einordnung = self._cell(row, headers.get('Objekt-Einordnung ', headers.get('Objekt-Einordnung', 10)))
+                    obj_einordnung = self._cell(row, headers.get('Classification', headers.get('Objekt-Einordnung ', headers.get('Objekt-Einordnung', 10))))
                     bezeichnung = self._cell(row, headers.get('Bezeichnung (DE)', headers.get('Bezeichnung', 11)))
                     designation = self._cell(row, headers.get('Designation (EN)', headers.get('Designation', 12)))
                     beschreibung = self._cell(row, headers.get('Beschreibung (DE)', headers.get('Beschreibung', 15)))
@@ -830,7 +862,7 @@ class Validator:
                         self.add('warning', 'system_generated_object_id_override', f'{class_id_column} is a system-generated field. Manual value {obj_id} will be overwritten by generated value {expected_obj_id}.', sheet=sheet_name, row=idx)
                         self.add_normalization(sheet_name, idx, class_id_column, obj_id, expected_obj_id, 'Manual ID overridden by system-generated ID derived from Designation/Bezeichnung', 'derived-object-id', True)
                     if object_class_allowed and obj_einordnung and obj_einordnung not in object_class_allowed:
-                        self.add('error', 'invalid_objekt_einordnung', f'Objekt-Einordnung must come from Rules.Objekt-Einordnung. Got: {obj_einordnung}', sheet=sheet_name, row=idx)
+                        self.add('error', 'invalid_objekt_einordnung', f'Classes.Classification must come from Rules.Klassifikation. Got: {obj_einordnung}', sheet=sheet_name, row=idx)
                     if status and status_allowed and status not in status_allowed:
                         self.add('error', 'invalid_object_status', f'{sheet_name}.Status must come from Rules.Status. Got: {status}', sheet=sheet_name, row=idx)
                     if version_date and not re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2})$', version_date):
@@ -868,7 +900,7 @@ class Validator:
             if not (beschreibung or description):
                 self.add('error', 'missing_class_definition', f'{sheet_name} row missing Beschreibung/Description', sheet=sheet_name, row=idx)
             if not obj_einordnung:
-                self.add('warning', 'missing_objekt_einordnung', f'{sheet_name} row missing Objekt-Einordnung', sheet=sheet_name, row=idx)
+                self.add('warning', 'missing_objekt_einordnung', f'{sheet_name} row missing Classification', sheet=sheet_name, row=idx)
             if not ifc_uri:
                 self.add('error', 'missing_ifc_uri', f'{sheet_name} row missing IFC URI', sheet=sheet_name, row=idx)
             else:
@@ -1017,6 +1049,11 @@ class Validator:
                 self.add('error', 'invalid_data_type', f'Invalid DataType (Base Type): {data_type}', sheet=sheet_name, row=idx)
             if not data_type_ifc:
                 self.add('error', 'missing_ifc_data_type', 'Property row missing DataType (IFC)', sheet=sheet_name, row=idx)
+            if self.is_abgeglichen_template():
+                property_classification = self._cell(row, headers.get('Property Classification'))
+                dropdown_property_classification = self._load_dropdown_values('Markmals-Klassifikation') or self._load_dropdown_values('Property Classification')
+                if property_classification and dropdown_property_classification and property_classification not in dropdown_property_classification:
+                    self.add('error', 'invalid_property_classification', f'Properties.Property Classification must come from Rules.Markmals-Klassifikation / Rules.Property Classification. Got: {property_classification}', sheet=sheet_name, row=idx)
             unit_code = self._cell(row, headers.get('Units/Einheit/Unité/Unità', headers.get('Einheit-Code', 21))) if self.is_abgeglichen_template() else None
             unit_qudt = self._cell(row, headers.get('QUDT URI', 22)) if self.is_abgeglichen_template() else None
             unit_name_de = self._cell(row, headers.get('Einheit-Name (DE)', 24)) if self.is_abgeglichen_template() else None
@@ -1279,18 +1316,39 @@ class Validator:
                 or row2_headers.get(self._norm('Dokumente - Bezeichnung/Designation'))
                 or row2_headers.get(self._norm('DocumentName (EN)'))
             )
+            governance_anchor = row2_headers.get(self._norm('Governance'))
             if not property_anchor:
                 property_anchor = 5
             property_start_col = property_anchor + 1
-            property_end_col = (document_anchor - 1) if document_anchor and document_anchor > property_start_col else ws.max_column
+            if document_anchor and document_anchor > property_start_col:
+                property_end_col = document_anchor - 1
+            elif governance_anchor and governance_anchor > property_start_col:
+                property_end_col = governance_anchor - 1
+            else:
+                property_end_col = ws.max_column
 
             matrix_validation_row = self._find_validation_row(ws)
             matrix_data_start = (matrix_validation_row + 1) if matrix_validation_row else 5
+
+            governance_status_col = row2_headers.get(self._norm('Status')) if governance_anchor else None
+            governance_version_date_col = row2_headers.get(self._norm('Version date')) if governance_anchor else None
+            governance_prov_col = row2_headers.get(self._norm('Provenance (PROV)')) if governance_anchor else None
+            if governance_anchor == 67 and ws.max_column >= 70:
+                governance_status_col = 68
+                governance_version_date_col = 69
+                governance_prov_col = 70
+            elif governance_anchor == 128 and ws.max_column >= 131:
+                governance_status_col = 129
+                governance_version_date_col = 130
+                governance_prov_col = 131
+            dropdown_status = self._load_dropdown_values('Status')
 
             property_cols = []
             for col_idx in range(property_start_col, property_end_col + 1):
                 label = self._cell([ws.cell(2, col_idx).value], 1)
                 prop_identifier = self._cell([ws.cell(3, col_idx).value], 1)
+                if self._is_separator_column('matrix', label):
+                    continue
                 if not label and not prop_identifier:
                     continue
                 prop_code = None
@@ -1315,10 +1373,12 @@ class Validator:
                     self.add('error', 'matrix_unknown_object_label', f'Data_Template class reference not found in Classes labels (DE/EN/FR/IT): {object_label}', sheet=matrix_sheet, row=ridx)
                 if property_group_label and self._norm(property_group_label) not in group_label_map:
                     self.add('error', 'matrix_unknown_group_label', f'Data_Template group reference not found in GroupOfProperties labels (DE/EN/FR/IT): {property_group_label}', sheet=matrix_sheet, row=ridx)
+                has_property_assignment = False
                 for col_idx, prop_code, label in property_cols:
                     cell = self._cell([ws.cell(ridx, col_idx).value], 1)
                     if cell is None or str(cell).strip() == '':
                         continue
+                    has_property_assignment = True
                     if str(cell).strip().lower() == 'x':
                         continue
                     overrides = self.parse_allowed_list(cell, sheet=matrix_sheet, row=ridx, column=f'col-{col_idx}')
@@ -1327,6 +1387,24 @@ class Validator:
                     overrides_cmp = {str(o).strip().casefold() for o in overrides}
                     if allowed and not overrides_cmp.issubset(allowed_cmp):
                         self.add('error', 'invalid_allowed_values_override', f'Data_Template override {overrides} is not a subset of the registered Values list for property {label} / {prop_code}.', sheet=matrix_sheet, row=ridx)
+                if governance_anchor and has_property_assignment:
+                    governance_status = self._cell([ws.cell(ridx, governance_status_col).value], 1) if governance_status_col else None
+                    governance_version_date = self._cell([ws.cell(ridx, governance_version_date_col).value], 1) if governance_version_date_col else None
+                    governance_prov = self._cell([ws.cell(ridx, governance_prov_col).value], 1) if governance_prov_col else None
+                    if not governance_status:
+                        self.add('error', 'matrix_missing_status', 'Data_Template.Status is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
+                    elif dropdown_status and governance_status not in dropdown_status:
+                        self.add('error', 'matrix_invalid_status', f'Data_Template.Status must come from Rules.Status. Got: {governance_status}', sheet=matrix_sheet, row=ridx)
+                    if not governance_version_date:
+                        self.add('error', 'matrix_missing_version_date', 'Data_Template.Version date is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
+                    elif not re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2})$', governance_version_date):
+                        self.add('error', 'matrix_invalid_version_date', f'Data_Template.Version date should be ISO 8601 date-time with timezone, e.g. 2026-06-18T15:30+02:00, got: {governance_version_date}', sheet=matrix_sheet, row=ridx)
+                    if not governance_prov:
+                        self.add('error', 'matrix_missing_provenance', 'Data_Template.Provenance (PROV) is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
+                elif governance_anchor:
+                    governance_values = [self._cell([ws.cell(ridx, c).value], 1) for c in [governance_status_col, governance_version_date_col, governance_prov_col] if c]
+                    if any(governance_values):
+                        self.add('warning', 'matrix_governance_without_assignment', 'Data_Template governance fields are filled on a row without any property assignment.', sheet=matrix_sheet, row=ridx)
             return
         row4 = [self._norm(v) for v in next(ws.iter_rows(min_row=4, max_row=4, values_only=True))]
         row5 = [self._norm(v) for v in next(ws.iter_rows(min_row=5, max_row=5, values_only=True))]

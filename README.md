@@ -34,13 +34,39 @@ Lesen Sie zuerst:
 
 - `GettingStarted.md`
 
-Verwenden Sie dann die leere Vorlage:
+Verwenden Sie dann je nach Zielgruppe die passende leere Vorlage:
 
-- `templates/Strukturvorlage_DataDictionary_v2_empty.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_public.xlsx`
 
 Wenn Sie ein Beispiel brauchen, schauen Sie hier:
 
-- `templates/test_files/Strukturvorlage_DataDictionary_v5_AreaMgmt.xlsx`
+- `templates/test_files/Data Dictionary_BdCH_AreaMgmt.xlsx`
+- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM.xlsx`
+
+## Struktur der Vorlagen
+
+Es gibt zwei leere Hauptvorlagen:
+
+- `*_empty.xlsx`
+- `*_empty_public.xlsx`
+
+### `*_empty.xlsx`
+
+Diese Vorlage ist für den allgemeinen industriellen Einsatz gedacht.
+Sie eignet sich für Unternehmen und Organisationen, die einen Data Dictionary intern oder branchenübergreifend strukturieren wollen, ohne den zusätzlichen öffentlichen Metadatenblock für öffentliche Auftraggeber zu benötigen.
+
+### `*_empty_public.xlsx`
+
+Diese Vorlage ist für öffentliche Auftraggeber und öffentliche Kunden gedacht.
+Sie enthält zusätzlich den Tab `Dictionary_public` und unterstützt damit weitergehende öffentliche Metadaten für Veröffentlichung, Governance und Katalogisierung.
+
+### Beispielvorlagen
+
+Zusätzlich gibt es zwei ausgefüllte Beispielvorlagen:
+
+- `Data Dictionary_BdCH_AreaMgmt.xlsx` als allgemeines Beispiel
+- `Strukturvorlage_DataDictionary_KBOB_FM.xlsx` als Beispiel für öffentliche Auftraggeber
 
 ## Wichtiger Nutzen
 
