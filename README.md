@@ -1,8 +1,8 @@
 # Öffentliche Data-Dictionary-Validierung
 
-> **Wichtiger Hinweis:** Das Repository `kbob-data-dictionary` ist derzeit ein Arbeitsrepository. Aktuell werden **keine Supportleistungen**, **keine individuelle Hilfestellung**, **keine Kontaktadresse** und **kein betreuter Kommunikationskanal** angeboten. Bitte nutzen Sie die bereitgestellten Dateien und Hinweise ausschliesslich in eigener Verantwortung.
+> **Wichtiger Hinweis:** Das Repository `KBOB-data-dictionary` ist derzeit ein Arbeitsrepository. Aktuell werden **keine Supportleistungen**, **keine individuelle Hilfestellung**, **keine Kontaktadresse** und **kein betreuter Kommunikationskanal** angeboten. Bitte nutzen Sie die bereitgestellten Dateien und Hinweise ausschliesslich in eigener Verantwortung.
 
-Dieses Repository hilft Unternehmen dabei, ihren bestehenden Datenkatalog in eine strukturierte Excel-Vorlage zu überführen und die Qualität dieser Daten systematisch zu verbessern.
+Dieses Repository hilft Organisationen dabei, ihren bestehenden Datenkatalog in eine strukturierte Excel-Vorlage zu überführen und die Qualität dieser Daten systematisch zu verbessern.
 
 Kurz gesagt ist der Ablauf so:
 
