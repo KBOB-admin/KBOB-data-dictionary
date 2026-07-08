@@ -403,8 +403,8 @@ class Validator:
                 self.add(level, 'missing_dictionary_field', f'Erforderlicher Header-Wert fehlt: {key}', sheet=core_sheet, row=value_row[1] if value_row else None)
 
         org_code, org_row = core_rows.get('OrganizationCode', (None, None))
-        if org_code and not re.match(r'^[A-Za-z0-9-]{1,7}$', org_code):
-            self.add('error', 'invalid_organization_code', 'OrganizationCode must be max 7 characters and contain no special characters except hyphen.', sheet=core_sheet, row=org_row)
+        if org_code and not re.match(r'^[A-Za-z]{1,7}$', org_code):
+            self.add('error', 'invalid_organization_code', 'OrganizationCode must be a user-defined name using only letters (A-Z / a-z), max 7 characters.', sheet=core_sheet, row=org_row)
 
         name_en, name_en_row = core_rows.get('DictionaryName (EN)', (None, None))
         name_de, _ = core_rows.get('DictionaryName (DE)', (None, None))
