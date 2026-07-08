@@ -35,30 +35,38 @@ Die wichtigsten Bereiche sind:
   fachliche Erklärung der Validierungslogik
 - `docs/validierung-mit-github-actions.md`  
   Erklärung des GitHub-Validierungsablaufs
-- `templates/Strukturvorlage_DataDictionary_v2_empty.xlsx`  
+- `templates/Strukturvorlage_DataDictionary_empty_v0.9.4.xlsx`  
   kanonische leere Vorlage
-- `templates/test_files/Strukturvorlage_DataDictionary_v5_AreaMgmt.xlsx`  
-  ausgefülltes Beispiel
+- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.4.xlsx`  
+  kanonische leere Public-Vorlage
+- `templates/test_files/Data Dictionary_BdCH_AreaMgmt_v0.9.4.xlsx`  
+  ausgefülltes allgemeines Beispiel
+- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.4.xlsx`  
+  ausgefülltes Public-Beispiel
 - `scripts/validator/run_github_validation.py`  
   GitHub-kompatibler Einstiegspunkt für die Validierung
 - `scripts/validator/validate_strukturvorlage.py`  
   zentrale Validierungslogik
 
+Wichtig: Diese vier `.xlsx`-Dateien bilden gemeinsam die kanonische Vorlagenfamilie und müssen bei jeder fachlichen oder strukturellen Anpassung synchron nachgeführt werden.
+
 ## 4. Leere Vorlage herunterladen
 
-Verwenden Sie für neue Arbeiten immer diese Datei:
+Verwenden Sie für neue Arbeiten je nach Zielgruppe eine der beiden leeren Startvorlagen:
 
-- `templates/Strukturvorlage_DataDictionary_v2_empty.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_v0.9.4.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.4.xlsx`
 
-Diese Datei ist die öffentliche Startvorlage.
+Die Public-Variante enthält zusätzlich den Tab `Dictionary_public`.
 
 ## 5. Beispiel-Datei anschauen
 
-Wenn Sie zuerst verstehen möchten, wie eine ausgefüllte Datei aussieht, öffnen Sie:
+Wenn Sie zuerst verstehen möchten, wie eine ausgefüllte Datei aussieht, öffnen Sie je nach Bedarf eines der Beispiele:
 
-- `templates/test_files/Strukturvorlage_DataDictionary_v5_AreaMgmt.xlsx`
+- `templates/test_files/Data Dictionary_BdCH_AreaMgmt_v0.9.4.xlsx`
+- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.4.xlsx`
 
-Diese Datei dient als öffentliches Beispiel.
+Auch diese beiden Beispiel-Dateien müssen mit den leeren Vorlagen synchron bleiben.
 
 ## 6. Vorlage ausfüllen
 
@@ -70,6 +78,19 @@ Wichtig:
 - Kopfzeilen nicht verschieben
 - Strukturblöcke nicht löschen
 - Pflichtfelder im `Header` ausfüllen
+- für Objektzuordnungen die Spalte `Classes.Class-Assignment` verwenden
+- für Property-Zuordnungen die Spalte `Properties.Property-Assignment` verwenden
+- die erlaubten Werte dafür nur aus den zugehörigen `Rules`-Spalten übernehmen:
+  - `Rules.Class-Assignment`
+  - `Rules.Property-Assignment`
+- die zugehörigen Spalten
+  - `Classes.Klassen-Zuordnung (DE)`
+  - `Classes.Affectation de classe (FR)`
+  - `Classes.Assegnazione della classe (IT)`
+  - `Properties.Merkmals-Zuordnung (DE)`
+  - `Properties.Attribution de propriété (FR)`
+  - `Properties.Assegnazione della proprietà (IT)`
+  sind nicht manuell zu pflegen, sondern system-generierte Ableitungen aus den `Rules`-Übersetzungsspalten
 
 ## 7. Validierung ausführen
 

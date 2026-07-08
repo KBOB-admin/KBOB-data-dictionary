@@ -14,7 +14,7 @@ Dazu gehört insbesondere:
 - Hinweiszeilen und Kopfzeilen dürfen nicht gelöscht oder verschoben werden,
 - die Datei muss technisch lesbar bleiben.
 
-Die öffentlichen Blattnamen im MVP sind:
+Die aktuellen Blattnamen im MVP-Kern sind:
 
 - `Header`
 - `Classes`
@@ -25,7 +25,19 @@ Die öffentlichen Blattnamen im MVP sind:
 - `Rules`
 - `Data_Template`
 
+Zusätzlich enthalten alle aktuellen Vorlagen auch:
+
+- `Impressum`
+- `Anleitung`
+- `Gelöschte Bauteile`
+
+Die Public-Varianten enthalten ausserdem zusätzlich:
+
+- `Dictionary_public`
+
 Wenn die Struktur nicht stimmt, kann der Validator die Datei nicht zuverlässig interpretieren.
+
+Wichtig für die Weiterentwicklung: Änderungen an Blattnamen, Kernspalten oder Guidance müssen immer konsistent über alle vier kanonischen `.xlsx`-Dateien umgesetzt und gleichzeitig in der Validator-Logik nachvollzogen werden. Der Validator darf dabei keine veralteten Zielstrukturen künstlich als primären Soll-Zustand konservieren.
 
 ## B. Pflichtfelder
 
@@ -65,6 +77,24 @@ Dann gilt:
 - nur diese Werte sind erlaubt,
 - freie Texteingaben können fehlschlagen,
 - die Werte müssen zur jeweiligen Liste in `Rules` passen.
+
+Wichtige aktuelle Beispiele sind:
+
+- `Classes.Class-Assignment` muss zur Liste in `Rules.Class-Assignment` passen,
+- `Properties.Property-Assignment` muss zur Liste in `Rules.Property-Assignment` passen,
+- die englischen Werte in `Rules.Class-Assignment` sind die massgebliche Dropdown-Liste für die Klassenzuordnung,
+- die englischen Werte in `Rules.Property-Assignment` sind die massgebliche Dropdown-Liste für die Merkmals-Zuordnung,
+- `Classes.Klassen-Zuordnung (DE)`, `Classes.Affectation de classe (FR)` und `Classes.Assegnazione della classe (IT)` werden system-generiert aus `Classes.Class-Assignment` plus den zugehörigen `Rules`-Übersetzungsspalten,
+- `Properties.Merkmals-Zuordnung (DE)`, `Properties.Attribution de propriété (FR)` und `Properties.Assegnazione della proprietà (IT)` werden system-generiert aus `Properties.Property-Assignment` plus den zugehörigen `Rules`-Übersetzungsspalten.
+
+## E. Referenzen zwischen Tabellen
+
+Der aktuelle MVP verwendet ausserdem die neue Benennung der Zuordnungsfelder:
+
+- `Class-Assignment` statt `Classification`
+- `Property-Assignment` statt `Property Classification`
+
+Diese Benennung ist Teil der aktuellen synchronisierten Vorlagenfamilie und muss in Vorlage, Beispiel und Validator konsistent bleiben.
 
 ## E. Referenzen zwischen Tabellen
 

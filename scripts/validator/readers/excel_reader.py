@@ -343,39 +343,23 @@ def _parse_concept_relations(ws) -> list[DDConceptRelation]:
 
 def load_dd(path: Path) -> DataDictionary:
     """Load a complete DD Excel file into a DataDictionary object.
-    Dispatches between legacy HE-SEM template and HE-DD v0.1 structure.
+    Current codat3 validator targets the canonical current workbook family only.
+    The legacy reader has been archived separately and is no longer used for active validation.
     """
     path = Path(path)
     wb = openpyxl.load_workbook(path)
 
-    modern_public = {"Classes", "Properties", "Values", "Documents", "Data_Template", "Header", "Dictionary_public", "GroupOfProperties", "Rules"}.issubset(set(wb.sheetnames))
-    modern_private = {"Classes", "Properties", "Values", "Documents", "Data_Template", "Header", "GroupOfProperties", "Rules"}.issubset(set(wb.sheetnames))
+    current_public = {"Classes", "Properties", "Values", "Documents", "Data_Template", "Header", "Dictionary_public", "GroupOfProperties", "Rules"}.issubset(set(wb.sheetnames))
+    current_private = {"Classes", "Properties", "Values", "Documents", "Data_Template", "Header", "GroupOfProperties", "Rules"}.issubset(set(wb.sheetnames))
+    if current_public or current_private:
+        from .current_template_reader import load_current_template_dd
+        return load_current_template_dd(path)
 
-    if {"Klassen", "Merkmale_Merkmalsgruppen", "Dokumente_Dokumentgruppen", "KlassenMerkmal"}.issubset(set(wb.sheetnames)) or {"Objekte", "Merkmale_Merkmalsgruppen", "Werte", "Data Template AreaMgmt", "Dokumente_Dokumentgruppen"}.issubset(set(wb.sheetnames)) or ({"Objekte", "Merkmale", "Werte", "Dokumente", "Data_Template", "Dictionary_core", "Dictionary_public"}.issubset(set(wb.sheetnames)) and ("Merkmalgruppen" in wb.sheetnames)) or modern_public or modern_private:
-        from .he_dd_v01_reader import load_he_dd_v01
-        return load_he_dd_v01(path)
-
-    # Tab 6 may be named ConceptRelation or PropertyRelation
-    tab6_name = None
-    for candidate in ("ConceptRelation", "PropertyRelation"):
-        if candidate in wb.sheetnames:
-            tab6_name = candidate
-            break
-
-    dictionary_sheet = "Header" if "Header" in wb.sheetnames else ("Dictionary_core" if "Dictionary_core" in wb.sheetnames else "Dictionary")
-    if ({"Objekte", "Merkmale", "Werte", "Dokumente", "Data_Template", "Dictionary_core", "Dictionary_public"}.issubset(set(wb.sheetnames)) and ("Merkmalgruppen" in wb.sheetnames)) or modern_public or modern_private:
-        from .he_dd_v01_reader import load_he_dd_v01
-        return load_he_dd_v01(path)
-    dd = DataDictionary(
-        source_file      = path,
-        meta             = _parse_dictionary(wb[dictionary_sheet]),
-        classes          = _parse_classes(wb["Class"]),
-        properties       = _parse_properties(wb["Property"]),
-        class_properties = _parse_class_properties(wb["ClassProperty"]),
-        allowed_values   = _parse_allowed_values(wb["AllowedValue"]),
-        concept_relations = _parse_concept_relations(wb[tab6_name]) if tab6_name else [],
+    raise ValueError(
+        'Unsupported workbook structure for the current validator reader. '
+        'This validator now targets only the current canonical template family; '
+        'the previous reader was archived for reference.'
     )
-    return dd
 
 
 if __name__ == "__main__":

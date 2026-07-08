@@ -22,7 +22,7 @@ on:
       workbook_path:
         description: 'Relativer Pfad zur zu validierenden .xlsx-Datei'
         required: false
-        default: 'templates/Strukturvorlage_DataDictionary_v2_empty.xlsx'
+        default: 'templates/test_files/Data Dictionary_BdCH_AreaMgmt_v0.9.4.xlsx'
 
 jobs:
   validate:
@@ -48,7 +48,7 @@ jobs:
           if [ -n "${{ github.event.inputs.workbook_path }}" ]; then
             echo "path=${{ github.event.inputs.workbook_path }}" >> "$GITHUB_OUTPUT"
           else
-            echo "path=templates/Strukturvorlage_DataDictionary_v2_empty.xlsx" >> "$GITHUB_OUTPUT"
+            echo "path=templates/test_files/Data Dictionary_BdCH_AreaMgmt_v0.9.4.xlsx" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Run validation wrapper
@@ -73,3 +73,4 @@ jobs:
             Validation_output/github_validation_report.json
             Validation_output/github_validation_report.md
             Validation_output/github_validation_summary.json
+            templates/test_files_out/*.xlsx
