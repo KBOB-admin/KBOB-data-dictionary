@@ -16,6 +16,27 @@ Das Ziel ist nicht einfach nur eine "gültige Datei", sondern ein besser struktu
 
 Dabei hilft die Validierung, den Inhalt schrittweise an bewährte fachliche und semantische Standards anzunähern, insbesondere an:
 
+Aktuelle Kernbegriffe der Vorlage sind unter anderem:
+
+- `Classes.Class-Assignment`
+- `Classes.Klassen-Zuordnung (DE)`
+- `Classes.Affectation de classe (FR)`
+- `Classes.Assegnazione della classe (IT)`
+- `Properties.Property-Assignment`
+- `Properties.Merkmals-Zuordnung (DE)`
+- `Properties.Attribution de propriété (FR)`
+- `Properties.Assegnazione della proprietà (IT)`
+- `Rules.Class-Assignment`
+- `Rules.Klassen-Zuordnung`
+- `Rules.Affectation de classe`
+- `Rules.Assegnazione della classe`
+- `Rules.Property-Assignment`
+- `Rules.Merkmals-Zuordnung`
+- `Rules.Attribution de propriété`
+- `Rules.Assegnazione della proprietà`
+
+Die englischen Assignment-Spalten sind die führenden Eingabefelder. Die zugehörigen DE/FR/IT-Spalten in `Classes` und `Properties` sind system-generierte Ableitungen aus den entsprechenden `Rules`-Übersetzungsspalten.
+
 - ISO 23386 / ISO 23387
 - ISO 12006
 - DCAT
@@ -36,37 +57,73 @@ Lesen Sie zuerst:
 
 Verwenden Sie dann je nach Zielgruppe die passende leere Vorlage:
 
-- `templates/Strukturvorlage_DataDictionary_empty.xlsx`
-- `templates/Strukturvorlage_DataDictionary_empty_public.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_v0.9.4.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.4.xlsx`
 
 Wenn Sie ein Beispiel brauchen, schauen Sie hier:
 
-- `templates/test_files/Data Dictionary_BdCH_AreaMgmt.xlsx`
-- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM.xlsx`
+- `templates/test_files/Data Dictionary_BdCH_AreaMgmt_v0.9.4.xlsx`
+- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.4.xlsx`
 
 ## Struktur der Vorlagen
 
-Es gibt zwei leere Hauptvorlagen:
+Es gibt vier kanonische `.xlsx`-Dateien, die fachlich und strukturell synchron gehalten werden müssen:
 
-- `*_empty.xlsx`
-- `*_empty_public.xlsx`
+### Leere Hauptvorlagen
 
-### `*_empty.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_v0.9.4.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.4.xlsx`
 
-Diese Vorlage ist für den allgemeinen industriellen Einsatz gedacht.
-Sie eignet sich für Unternehmen und Organisationen, die einen Data Dictionary intern oder branchenübergreifend strukturieren wollen, ohne den zusätzlichen öffentlichen Metadatenblock für öffentliche Auftraggeber zu benötigen.
+`*_empty.xlsx` ist die allgemeine Vorlage ohne öffentlichen Zusatzblock.
 
-### `*_empty_public.xlsx`
+`*_empty_public.xlsx` ist die Variante für öffentliche Auftraggeber. Sie enthält zusätzlich den Tab `Dictionary_public`.
 
-Diese Vorlage ist für öffentliche Auftraggeber und öffentliche Kunden gedacht.
-Sie enthält zusätzlich den Tab `Dictionary_public` und unterstützt damit weitergehende öffentliche Metadaten für Veröffentlichung, Governance und Katalogisierung.
+### Ausgefüllte Beispielvorlagen
 
-### Beispielvorlagen
+- `templates/test_files/Data Dictionary_BdCH_AreaMgmt_v0.9.4.xlsx`
+- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.4.xlsx`
 
-Zusätzlich gibt es zwei ausgefüllte Beispielvorlagen:
+Diese beiden Beispiel-Dateien müssen dieselbe fachliche Struktur, dieselben Blattnamen, dieselben Kernspalten und dieselbe Guidance widerspiegeln wie die leeren Hauptvorlagen. Die einzige zulässige strukturelle Abweichung bleibt der öffentliche Zusatzblock `Dictionary_public` in den beiden Public-Varianten.
 
-- `Data Dictionary_BdCH_AreaMgmt.xlsx` als allgemeines Beispiel
-- `Strukturvorlage_DataDictionary_KBOB_FM.xlsx` als Beispiel für öffentliche Auftraggeber
+## Synchronisationsregel für künftiges Feedback
+
+Wenn Feedback an der Vorlage umgesetzt wird, muss es immer auf alle vier kanonischen `.xlsx`-Dateien angewendet werden:
+
+- `templates/Strukturvorlage_DataDictionary_empty_v0.9.4.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.4.xlsx`
+- `templates/test_files/Data Dictionary_BdCH_AreaMgmt_v0.9.4.xlsx`
+- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.4.xlsx`
+
+Dabei gilt:
+
+- die beiden leeren Vorlagen bleiben untereinander synchron,
+- die beiden Beispielvorlagen bleiben untereinander synchron,
+- Beispiele und leere Vorlagen bleiben in Blattstruktur, Kernspalten, Benennungen und Guidance synchron,
+- nur der Public-Zusatz `Dictionary_public` darf exklusiv in den Public-Dateien bestehen.
+
+## Validator-Ausrichtungsregel
+
+Jede strukturelle oder fachliche Änderung an den Vorlagen muss gleichzeitig im Validator nachvollzogen werden.
+
+Das bedeutet insbesondere:
+
+- keine veralteten Blattnamen im Validator belassen,
+- keine Legacy-Spaltennamen als primäre Zielstruktur weiterführen,
+- keine Prüfregeln für Strukturen behalten, die in den synchronisierten Vorlagen nicht mehr existieren,
+- Dokumentation, GitHub-Validierung und Validator-Logik gemeinsam nachführen.
+
+Ziel ist, dass der Validator immer die aktuell synchronisierte Vorlagenfamilie prüft und keine historischen Artefakte künstlich konserviert.
+
+## Wichtige Benennungsregel
+
+Die aktuelle Vorlagenfamilie verwendet die folgenden Zuordnungsbegriffe:
+
+- `Classes.Class-Assignment` statt `Classes.Classification`
+- `Properties.Property-Assignment` statt `Properties.Property Classification`
+- `Rules.Property-Assignment` statt `Rules.Property Classification`
+- `Rules.Class-Assignment` als englische Übersetzungs- und Dropdown-Spalte zu `Rules.Klassifikation`
+
+Wenn Sie bestehende Arbeitsmappen oder ältere Beispiele vergleichen, achten Sie darauf, nur die aktuelle Benennung der synchronisierten Vorlagenfamilie zu verwenden.
 
 ## Wichtiger Nutzen
 
