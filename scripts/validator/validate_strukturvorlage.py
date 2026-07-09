@@ -608,15 +608,21 @@ class Validator:
             prov = self._cell(row, headers.get('Provenance (PROV)', 19))
             if not any([katalog_id, label_de, label_fr, label_it, label_en, values_en_raw, values_de_raw, values_fr_raw, values_it_raw, status, version_date, prov]):
                 continue
-            if not katalog_id:
-                self.add('error', 'missing_value_catalog_id', 'Values row missing Enumeration-ID.', sheet=sheet_name, row=idx)
-            elif katalog_id in seen_ids:
-                self.add('error', 'duplicate_value_catalog_id', f'Duplicate Enumeration-ID: {katalog_id}', sheet=sheet_name, row=idx)
-            else:
-                seen_ids.add(katalog_id)
             expected_id = f"{self.slugify(label_en).replace('-', '_')}_enum" if label_en else None
-            if katalog_id and expected_id and katalog_id != expected_id:
-                self.add('warning', 'noncanonical_value_list_id', f'Enumeration-ID is present but differs from canonical generated form {expected_id}', sheet=sheet_name, row=idx)
+            if not katalog_id and expected_id:
+                self.add_normalization(sheet_name, idx, 'Enumeration-ID', katalog_id, expected_id, 'System-generated Enumeration-ID derived from Designation (EN)', 'derived-enumeration-id', True)
+                katalog_id = expected_id
+            elif not katalog_id:
+                self.add('error', 'missing_value_catalog_id', 'Values row missing Enumeration-ID and cannot derive it because Designation (EN) is empty.', sheet=sheet_name, row=idx)
+            elif katalog_id and expected_id and katalog_id != expected_id:
+                self.add('warning', 'noncanonical_value_list_id', f'Enumeration-ID is a system-generated field. Manual value {katalog_id} will be overwritten by canonical generated form {expected_id}.', sheet=sheet_name, row=idx)
+                self.add_normalization(sheet_name, idx, 'Enumeration-ID', katalog_id, expected_id, 'Manual Enumeration-ID overridden by canonical generated form derived from Designation (EN)', 'derived-enumeration-id', True)
+                katalog_id = expected_id
+            if katalog_id:
+                if katalog_id in seen_ids:
+                    self.add('error', 'duplicate_value_catalog_id', f'Duplicate Enumeration-ID: {katalog_id}', sheet=sheet_name, row=idx)
+                else:
+                    seen_ids.add(katalog_id)
             if not label_en and katalog_id:
                 self.add('error', 'missing_required_english_translation', 'Values.Designation (EN) must be filled in English (EN) if an Enumeration-ID is given.', sheet=sheet_name, row=idx)
             if label_en and not any([label_de, label_fr, label_it]):
@@ -633,11 +639,8 @@ class Validator:
             values_de = self.parse_allowed_list(values_de_raw, sheet=sheet_name, row=idx, column='Werteliste (DE)') if values_de_raw else []
             values_fr = self.parse_allowed_list(values_fr_raw, sheet=sheet_name, row=idx, column='Liste de valeurs (FR)') if values_fr_raw else []
             values_it = self.parse_allowed_list(values_it_raw, sheet=sheet_name, row=idx, column='Lista valori (IT)') if values_it_raw else []
-            if values_en and len(values_en) != len(set(v.casefold() for v in values_en)):
-                self.add('error', 'duplicate_enumeration_values', f'Enumeration (EN) contains duplicate values for Enumeration-ID {katalog_id or idx}', sheet=sheet_name, row=idx)
-            for column_label, parsed in [('Werteliste (DE)', values_de), ('Liste de valeurs (FR)', values_fr), ('Lista valori (IT)', values_it)]:
-                if parsed and len(parsed) != len(set(v.casefold() for v in parsed)):
-                    self.add('error', 'duplicate_enumeration_values', f'{column_label} contains duplicate values for Enumeration-ID {katalog_id or idx}', sheet=sheet_name, row=idx)
+            # Duplicate values are allowed within a language list; validation only checks cross-language list alignment.
+            # Historical templates may intentionally reuse the same token multiple times within the same language.
             en_len = len(values_en)
             for column_label, parsed in [('Werteliste (DE)', values_de), ('Liste de valeurs (FR)', values_fr), ('Lista valori (IT)', values_it)]:
                 if parsed and values_en and len(parsed) != en_len:
