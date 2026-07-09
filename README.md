@@ -62,8 +62,8 @@ Verwenden Sie dann je nach Zielgruppe die passende leere Vorlage:
 
 Wenn Sie ein Beispiel brauchen, schauen Sie hier:
 
-- `templates/test_files/Data Dictionary_BdCH_AreaMgmt_v0.9.4.xlsx`
-- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.4.xlsx`
+- `templates/test_files/Strukturvorlage_AreaMgmt_v0.5.0.xlsx`
+- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx`
 
 ## Struktur der Vorlagen
 
@@ -80,8 +80,8 @@ Es gibt vier kanonische `.xlsx`-Dateien, die fachlich und strukturell synchron g
 
 ### Ausgefüllte Beispielvorlagen
 
-- `templates/test_files/Data Dictionary_BdCH_AreaMgmt_v0.9.4.xlsx`
-- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.4.xlsx`
+- `templates/test_files/Strukturvorlage_AreaMgmt_v0.5.0.xlsx`
+- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx`
 
 Diese beiden Beispiel-Dateien müssen dieselbe fachliche Struktur, dieselben Blattnamen, dieselben Kernspalten und dieselbe Guidance widerspiegeln wie die leeren Hauptvorlagen. Die einzige zulässige strukturelle Abweichung bleibt der öffentliche Zusatzblock `Dictionary_public` in den beiden Public-Varianten.
 
@@ -91,8 +91,8 @@ Wenn Feedback an der Vorlage umgesetzt wird, muss es immer auf alle vier kanonis
 
 - `templates/Strukturvorlage_DataDictionary_empty_v0.9.4.xlsx`
 - `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.4.xlsx`
-- `templates/test_files/Data Dictionary_BdCH_AreaMgmt_v0.9.4.xlsx`
-- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.4.xlsx`
+- `templates/test_files/Strukturvorlage_AreaMgmt_v0.5.0.xlsx`
+- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx`
 
 Dabei gilt:
 
@@ -124,6 +124,10 @@ Die aktuelle Vorlagenfamilie verwendet die folgenden Zuordnungsbegriffe:
 - `Rules.Class-Assignment` als englische Übersetzungs- und Dropdown-Spalte zu `Rules.Klassifikation`
 
 Wenn Sie bestehende Arbeitsmappen oder ältere Beispiele vergleichen, achten Sie darauf, nur die aktuelle Benennung der synchronisierten Vorlagenfamilie zu verwenden.
+
+## Validierungs-Artefakte
+
+Wenn die Datei `pipeline_valid` ist, erzeugt die GitHub-Validierung zusätzlich eine validierte `.xlsx`-Artefaktdatei mit system-generierten Rückschreibungen, zum Beispiel für abgeleitete IDs und andere sichere Normalisierungen. Diese Datei wird zusammen mit den JSON- und Markdown-Berichten als GitHub-Artefakt hochgeladen.
 
 ## Wichtiger Nutzen
 

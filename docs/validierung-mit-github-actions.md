@@ -4,9 +4,9 @@
 
 Die GitHub Action verwendet standardmässig:
 
-- `templates/Strukturvorlage_DataDictionary_v2_empty.xlsx`
+- `templates/test_files/Strukturvorlage_AreaMgmt_v0.5.0.xlsx`
 
-Dieser Standardpfad dient nur als **Smoke-Test** für die kanonische leere Vorlage.
+Dieser Standardpfad dient als öffentlicher Referenztest für eine ausgefüllte und pipeline-gültige Beispielarbeitsmappe.
 
 ## Empfohlener Nutzer-Workflow
 
@@ -36,7 +36,7 @@ Die Validierung erzeugt Berichte unter:
 
 - `Validation_output/`
 
-In GitHub Actions werden diese Berichte zusätzlich als Artefakte hochgeladen.
+In GitHub Actions werden diese Berichte zusätzlich als Artefakte hochgeladen. Wenn die Arbeitsmappe `pipeline_valid` ist, wird ausserdem eine validierte `.xlsx` mit system-generierten Rückschreibungen in `Validation_output/` erzeugt und als Artefakt mit hochgeladen.
 
 ## Aktueller Geltungsbereich
 
