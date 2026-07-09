@@ -682,6 +682,9 @@ class Validator:
             else:
                 if expected_prefix and not group_en.startswith(expected_prefix):
                     self.add('error', 'invalid_group_label_prefix', f"Designation (EN) should start with '{expected_prefix}'.", sheet=sheet_name, row=idx)
+                forbidden_prefixes = ('Pset', 'IFC', 'CH')
+                if group_en.startswith(forbidden_prefixes):
+                    self.add('error', 'invalid_group_label_forbidden_prefix', 'Designation (EN) must not start with the forbidden prefixes Pset, IFC, or CH.', sheet=sheet_name, row=idx)
                 expected_id = self.slugify(group_en)
                 if not group_id and expected_id:
                     self.add_normalization(sheet_name, idx, 'GoP-ID', group_id, expected_id, 'System-generated ID derived from Designation (EN)', 'derived-group-id', True)
