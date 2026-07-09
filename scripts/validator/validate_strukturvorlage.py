@@ -313,6 +313,33 @@ class Validator:
                     uris.add(m)
         return uris
 
+    def _load_rules_multilingual_lookup(self, canonical_header: str, translations: list[tuple[str, str]]) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
+        ws = self.wb['Rules'] if 'Rules' in self.wb.sheetnames else None
+        if ws is None:
+            return {}, {}
+        headers = self._sheet_headers('Rules')
+        concept_by_value: dict[str, str] = {}
+        translations_by_concept: dict[str, dict[str, str]] = {}
+        canonical_col = headers.get(canonical_header)
+        if not canonical_col:
+            return {}, {}
+        for idx, row in self._iter_data_rows(ws, self._sheet_start_row('Rules')):
+            canonical = self._cell(row, canonical_col)
+            if not canonical:
+                continue
+            translations_by_concept.setdefault(canonical, {})
+            concept_by_value[canonical] = canonical
+            for lang_key, header in translations:
+                col = headers.get(header)
+                if not col:
+                    continue
+                val = self._cell(row, col)
+                if val:
+                    concept_by_value[val] = canonical
+                    translations_by_concept[canonical][lang_key] = val
+            translations_by_concept[canonical]['en'] = canonical
+        return concept_by_value, translations_by_concept
+
     def validate(self):
         self.validate_required_sheets()
         self.validate_dictionary()
@@ -376,8 +403,8 @@ class Validator:
                 self.add(level, 'missing_dictionary_field', f'Erforderlicher Header-Wert fehlt: {key}', sheet=core_sheet, row=value_row[1] if value_row else None)
 
         org_code, org_row = core_rows.get('OrganizationCode', (None, None))
-        if org_code and not re.match(r'^[A-Za-z0-9-]{1,7}$', org_code):
-            self.add('error', 'invalid_organization_code', 'OrganizationCode must be max 7 characters and contain no special characters except hyphen.', sheet=core_sheet, row=org_row)
+        if org_code and not re.match(r'^[A-Za-z]{1,7}$', org_code):
+            self.add('error', 'invalid_organization_code', 'OrganizationCode must be a user-defined name using only letters (A-Z / a-z), max 7 characters.', sheet=core_sheet, row=org_row)
 
         name_en, name_en_row = core_rows.get('DictionaryName (EN)', (None, None))
         name_de, _ = core_rows.get('DictionaryName (DE)', (None, None))
@@ -553,6 +580,8 @@ class Validator:
         return self._header_index_map(self.wb[sheet_name], self._header_row_index(sheet_name))
 
     def _sheet_start_row(self, sheet_name: str) -> int:
+        if sheet_name == 'Rules':
+            return 2
         if sheet_name in {'Classes', 'Properties', 'Values', 'Documents', 'GroupOfProperties'}:
             return 7
         if sheet_name == 'Data_Template':
@@ -764,25 +793,38 @@ class Validator:
                 self.add('error', 'missing_class_label', 'Classes row missing Bezeichnung/Designation', sheet=sheet_name, row=idx)
             if not any([desc_de, desc_en, desc_fr, desc_it]):
                 self.add('error', 'missing_class_definition', 'Classes row missing Beschreibung/Description', sheet=sheet_name, row=idx)
-            if object_class_allowed and obj_einordnung and obj_einordnung not in object_class_allowed:
-                self.add('error', 'invalid_class_assignment', f'Classes.Class-Assignment must come from Rules.Class-Assignment. Got: {obj_einordnung}', sheet=sheet_name, row=idx)
-            if obj_einordnung:
-                class_assignment_de_map = self._load_rules_translation_map('Class-Assignment', 'Klassen-Zuordnung')
-                class_assignment_fr_map = self._load_rules_translation_map('Class-Assignment', 'Affectation de classe')
-                class_assignment_it_map = self._load_rules_translation_map('Class-Assignment', 'Assegnazione della classe')
-                expected_de = class_assignment_de_map.get(obj_einordnung)
-                expected_fr = class_assignment_fr_map.get(obj_einordnung)
-                expected_it = class_assignment_it_map.get(obj_einordnung)
-                for column_label, actual_value, expected_value in [
-                    ('Klassen-Zuordnung (DE)', class_assign_de, expected_de),
-                    ('Affectation de classe (FR)', class_assign_fr, expected_fr),
-                    ('Assegnazione della classe (IT)', class_assign_it, expected_it),
-                ]:
+            class_lookup, class_translations = self._load_rules_multilingual_lookup('Class-Assignment', [
+                ('de', 'Klassen-Zuordnung'),
+                ('fr', 'Affectation de classe'),
+                ('it', 'Assegnazione della classe'),
+            ])
+            provided_class_values = [
+                ('Class-Assignment', obj_einordnung),
+                ('Klassen-Zuordnung (DE)', class_assign_de),
+                ('Affectation de classe (FR)', class_assign_fr),
+                ('Assegnazione della classe (IT)', class_assign_it),
+            ]
+            resolved_class_concepts = {class_lookup[val] for _, val in provided_class_values if val and val in class_lookup}
+            unresolved_class_values = [(label, val) for label, val in provided_class_values if val and val not in class_lookup]
+            for label, val in unresolved_class_values:
+                self.add('error', 'invalid_class_assignment', f'{label} must match one of the authoritative multilingual Rules class-assignment values. Got: {val}', sheet=sheet_name, row=idx)
+            if len(resolved_class_concepts) > 1:
+                self.add('error', 'contradictory_class_assignments', 'Classes assignment values across languages resolve to different authoritative concepts.', sheet=sheet_name, row=idx)
+            canonical_class_assignment = next(iter(resolved_class_concepts)) if resolved_class_concepts else None
+            if canonical_class_assignment:
+                expected_values = {
+                    'Class-Assignment': canonical_class_assignment,
+                    'Klassen-Zuordnung (DE)': class_translations.get(canonical_class_assignment, {}).get('de'),
+                    'Affectation de classe (FR)': class_translations.get(canonical_class_assignment, {}).get('fr'),
+                    'Assegnazione della classe (IT)': class_translations.get(canonical_class_assignment, {}).get('it'),
+                }
+                for column_label, actual_value in provided_class_values:
+                    expected_value = expected_values.get(column_label)
                     if expected_value and not actual_value:
-                        self.add_normalization(sheet_name, idx, column_label, actual_value, expected_value, 'System-generated multilingual class assignment derived from Class-Assignment via Rules', 'derived-class-assignment-translation', True)
+                        self.add_normalization(sheet_name, idx, column_label, actual_value, expected_value, 'Missing multilingual class assignment derived from authoritative Rules concept', 'derived-class-assignment-translation', True)
                     elif expected_value and actual_value != expected_value:
-                        self.add('warning', 'system_generated_class_assignment_override', f'{column_label} is a system-generated field. Manual value {actual_value} will be overwritten by derived value {expected_value}.', sheet=sheet_name, row=idx)
-                        self.add_normalization(sheet_name, idx, column_label, actual_value, expected_value, 'Manual multilingual class assignment overridden by Rules-based translation', 'derived-class-assignment-translation', True)
+                        self.add('warning', 'system_generated_class_assignment_override', f'{column_label} is inconsistent with the resolved authoritative class assignment concept. Manual value {actual_value} will be overwritten by {expected_value}.', sheet=sheet_name, row=idx)
+                        self.add_normalization(sheet_name, idx, column_label, actual_value, expected_value, 'Manual multilingual class assignment overridden by authoritative Rules concept', 'derived-class-assignment-translation', True)
             if not ifc_uri:
                 self.add('error', 'missing_ifc_uri', 'Classes row missing IFC_URI', sheet=sheet_name, row=idx)
             else:
@@ -889,26 +931,38 @@ class Validator:
                 self.add('error', 'invalid_data_type', f'Invalid DataType (Base Type): {data_type}', sheet=sheet_name, row=idx)
             if not data_type_ifc:
                 self.add('error', 'missing_ifc_data_type', 'Property row missing DataType (IFC)', sheet=sheet_name, row=idx)
-            dropdown_property_classification = self._load_dropdown_values('Property-Assignment')
-            if property_classification and dropdown_property_classification and property_classification not in dropdown_property_classification:
-                self.add('error', 'invalid_property_assignment', f'Properties.Property-Assignment must come from Rules.Property-Assignment. Got: {property_classification}', sheet=sheet_name, row=idx)
-            if property_classification:
-                property_assignment_de_map = self._load_rules_translation_map('Property-Assignment', 'Merkmals-Zuordnung')
-                property_assignment_fr_map = self._load_rules_translation_map('Property-Assignment', 'Attribution de propriété')
-                property_assignment_it_map = self._load_rules_translation_map('Property-Assignment', 'Assegnazione della proprietà')
-                expected_de = property_assignment_de_map.get(property_classification)
-                expected_fr = property_assignment_fr_map.get(property_classification)
-                expected_it = property_assignment_it_map.get(property_classification)
-                for column_label, actual_value, expected_value in [
-                    ('Merkmals-Zuordnung (DE)', property_assign_de, expected_de),
-                    ('Attribution de propriété (FR)', property_assign_fr, expected_fr),
-                    ('Assegnazione della proprietà (IT)', property_assign_it, expected_it),
-                ]:
+            property_lookup, property_translations = self._load_rules_multilingual_lookup('Property-Assignment', [
+                ('de', 'Merkmals-Zuordnung'),
+                ('fr', 'Attribution de propriété'),
+                ('it', 'Assegnazione della proprietà'),
+            ])
+            provided_property_values = [
+                ('Property-Assignment', property_classification),
+                ('Merkmals-Zuordnung (DE)', property_assign_de),
+                ('Attribution de propriété (FR)', property_assign_fr),
+                ('Assegnazione della proprietà (IT)', property_assign_it),
+            ]
+            resolved_property_concepts = {property_lookup[val] for _, val in provided_property_values if val and val in property_lookup}
+            unresolved_property_values = [(label, val) for label, val in provided_property_values if val and val not in property_lookup]
+            for label, val in unresolved_property_values:
+                self.add('error', 'invalid_property_assignment', f'{label} must match one of the authoritative multilingual Rules property-assignment values. Got: {val}', sheet=sheet_name, row=idx)
+            if len(resolved_property_concepts) > 1:
+                self.add('error', 'contradictory_property_assignments', 'Properties assignment values across languages resolve to different authoritative concepts.', sheet=sheet_name, row=idx)
+            canonical_property_assignment = next(iter(resolved_property_concepts)) if resolved_property_concepts else None
+            if canonical_property_assignment:
+                expected_values = {
+                    'Property-Assignment': canonical_property_assignment,
+                    'Merkmals-Zuordnung (DE)': property_translations.get(canonical_property_assignment, {}).get('de'),
+                    'Attribution de propriété (FR)': property_translations.get(canonical_property_assignment, {}).get('fr'),
+                    'Assegnazione della proprietà (IT)': property_translations.get(canonical_property_assignment, {}).get('it'),
+                }
+                for column_label, actual_value in provided_property_values:
+                    expected_value = expected_values.get(column_label)
                     if expected_value and not actual_value:
-                        self.add_normalization(sheet_name, idx, column_label, actual_value, expected_value, 'System-generated multilingual property assignment derived from Property-Assignment via Rules', 'derived-property-assignment-translation', True)
+                        self.add_normalization(sheet_name, idx, column_label, actual_value, expected_value, 'Missing multilingual property assignment derived from authoritative Rules concept', 'derived-property-assignment-translation', True)
                     elif expected_value and actual_value != expected_value:
-                        self.add('warning', 'system_generated_property_assignment_override', f'{column_label} is a system-generated field. Manual value {actual_value} will be overwritten by derived value {expected_value}.', sheet=sheet_name, row=idx)
-                        self.add_normalization(sheet_name, idx, column_label, actual_value, expected_value, 'Manual multilingual property assignment overridden by Rules-based translation', 'derived-property-assignment-translation', True)
+                        self.add('warning', 'system_generated_property_assignment_override', f'{column_label} is inconsistent with the resolved authoritative property assignment concept. Manual value {actual_value} will be overwritten by {expected_value}.', sheet=sheet_name, row=idx)
+                        self.add_normalization(sheet_name, idx, column_label, actual_value, expected_value, 'Manual multilingual property assignment overridden by authoritative Rules concept', 'derived-property-assignment-translation', True)
             if enum_designation and enum_designation not in value_designations:
                 self.add('warning', 'noncanonical_value_list_id', f'EnumerationDesignation (EN) is present but does not match any existing Values.Designation (EN): {enum_designation}', sheet=sheet_name, row=idx)
             if ifc_property_uri:
