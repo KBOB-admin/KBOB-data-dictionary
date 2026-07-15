@@ -35,9 +35,9 @@ Die wichtigsten Bereiche sind:
   fachliche Erklärung der Validierungslogik
 - `docs/validierung-mit-github-actions.md`  
   Erklärung des GitHub-Validierungsablaufs
-- `templates/Strukturvorlage_DataDictionary_empty_v0.9.4.xlsx`  
+- `templates/Strukturvorlage_DataDictionary_empty_v0.9.5.xlsx`  
   kanonische leere Vorlage
-- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.4.xlsx`  
+- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx`  
   kanonische leere Public-Vorlage
 - `templates/test_files/Strukturvorlage_AreaMgmt_v0.5.0.xlsx`  
   ausgefülltes allgemeines Beispiel
@@ -54,8 +54,8 @@ Wichtig: Diese vier `.xlsx`-Dateien bilden gemeinsam die kanonische Vorlagenfami
 
 Verwenden Sie für neue Arbeiten je nach Zielgruppe eine der beiden leeren Startvorlagen:
 
-- `templates/Strukturvorlage_DataDictionary_empty_v0.9.4.xlsx`
-- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.4.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_v0.9.5.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx`
 
 Die Public-Variante enthält zusätzlich den Tab `Dictionary_public`.
 
