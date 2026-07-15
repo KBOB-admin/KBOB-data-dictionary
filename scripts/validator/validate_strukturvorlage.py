@@ -392,8 +392,8 @@ class Validator:
         is_blank_template = self.workbook_path.name in {
             'Strukturvorlage_DataDictionary_empty.xlsx',
             'Strukturvorlage_DataDictionary_empty_public.xlsx',
-            'Strukturvorlage_DataDictionary_empty_v0.9.4.xlsx',
-            'Strukturvorlage_DataDictionary_empty_public_v0.9.4.xlsx',
+            'Strukturvorlage_DataDictionary_empty_v0.9.5.xlsx',
+            'Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx',
         }
 
         for key in ['OrganizationCode', 'DictionaryName (EN)', 'DictionaryVersion', 'LifecycleStatus']:

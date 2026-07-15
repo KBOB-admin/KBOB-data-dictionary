@@ -57,8 +57,8 @@ Lesen Sie zuerst:
 
 Verwenden Sie dann je nach Zielgruppe die passende leere Vorlage:
 
-- `templates/Strukturvorlage_DataDictionary_empty_v0.9.4.xlsx`
-- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.4.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_v0.9.5.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx`
 
 Wenn Sie ein Beispiel brauchen, schauen Sie hier:
 
@@ -71,8 +71,8 @@ Es gibt vier kanonische `.xlsx`-Dateien, die fachlich und strukturell synchron g
 
 ### Leere Hauptvorlagen
 
-- `templates/Strukturvorlage_DataDictionary_empty_v0.9.4.xlsx`
-- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.4.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_v0.9.5.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx`
 
 `*_empty.xlsx` ist die allgemeine Vorlage ohne öffentlichen Zusatzblock.
 
@@ -89,8 +89,8 @@ Diese beiden Beispiel-Dateien müssen dieselbe fachliche Struktur, dieselben Bla
 
 Wenn Feedback an der Vorlage umgesetzt wird, muss es immer auf alle vier kanonischen `.xlsx`-Dateien angewendet werden:
 
-- `templates/Strukturvorlage_DataDictionary_empty_v0.9.4.xlsx`
-- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.4.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_v0.9.5.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx`
 - `templates/test_files/Strukturvorlage_AreaMgmt_v0.5.0.xlsx`
 - `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx`
 

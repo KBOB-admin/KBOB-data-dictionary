@@ -29,8 +29,8 @@ Es soll Benutzern helfen,
 
 ### Für die Arbeit mit Excel-Dateien
 
-- `templates/Strukturvorlage_DataDictionary_empty_v0.9.4.xlsx`
-- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.4.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_v0.9.5.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx`
 - `templates/test_files/Strukturvorlage_AreaMgmt_v0.5.0.xlsx`
 - `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx`
 
