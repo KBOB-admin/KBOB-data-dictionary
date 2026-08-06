@@ -37,7 +37,7 @@ Die Public-Varianten enthalten ausserdem zusätzlich:
 
 Wenn die Struktur nicht stimmt, kann der Validator die Datei nicht zuverlässig interpretieren.
 
-Wichtig für die Weiterentwicklung: Änderungen an Blattnamen, Kernspalten oder Guidance müssen immer konsistent über alle vier kanonischen `.xlsx`-Dateien umgesetzt und gleichzeitig in der Validator-Logik nachvollzogen werden. Der Validator darf dabei keine veralteten Zielstrukturen künstlich als primären Soll-Zustand konservieren.
+Wichtig für die Weiterentwicklung: Änderungen an Blattnamen, Kernspalten oder Guidance müssen immer konsistent über alle kanonischen `.xlsx`-Dateien umgesetzt und gleichzeitig in der Validator-Logik nachvollzogen werden. Der Validator darf dabei keine veralteten Zielstrukturen künstlich als primären Soll-Zustand konservieren.
 
 ## B. Pflichtfelder
 

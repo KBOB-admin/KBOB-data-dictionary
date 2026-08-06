@@ -41,14 +41,12 @@ Die wichtigsten Bereiche sind:
   kanonische leere Public-Vorlage
 - `templates/test_files/Strukturvorlage_AreaMgmt_v0.5.0.xlsx`  
   ausgefülltes allgemeines Beispiel
-- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx`  
-  ausgefülltes Public-Beispiel
 - `scripts/validator/run_github_validation.py`  
   GitHub-kompatibler Einstiegspunkt für die Validierung
 - `scripts/validator/validate_strukturvorlage.py`  
   zentrale Validierungslogik
 
-Wichtig: Diese vier `.xlsx`-Dateien bilden gemeinsam die kanonische Vorlagenfamilie und müssen bei jeder fachlichen oder strukturellen Anpassung synchron nachgeführt werden.
+Wichtig: Diese `.xlsx`-Dateien bilden gemeinsam die kanonische Vorlagenfamilie und müssen bei jeder fachlichen oder strukturellen Anpassung synchron nachgeführt werden.
 
 ## 4. Leere Vorlage herunterladen
 
@@ -64,9 +62,8 @@ Die Public-Variante enthält zusätzlich den Tab `Dictionary_public`.
 Wenn Sie zuerst verstehen möchten, wie eine ausgefüllte Datei aussieht, öffnen Sie je nach Bedarf eines der Beispiele:
 
 - `templates/test_files/Strukturvorlage_AreaMgmt_v0.5.0.xlsx`
-- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx`
 
-Auch diese beiden Beispiel-Dateien müssen mit den leeren Vorlagen synchron bleiben.
+Auch diese Beispiel-Datei muss mit den leeren Vorlagen synchron bleiben.
 
 ## 6. Vorlage ausfüllen
 
