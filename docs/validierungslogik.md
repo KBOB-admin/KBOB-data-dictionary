@@ -119,7 +119,18 @@ Dazu gehören zum Beispiel:
 - kontrollierte Werte aus Listen,
 - Konsistenz zwischen Feldern und Referenzen.
 
-## G. Ergebnisse
+## G. Reproduzierbare Referenzartefakte
+
+Der Validator verwendet für externe Referenzprüfungen ausschliesslich Artefakte, die im Repository liegen:
+
+- `resources/qudt/units.ttl` für `Properties.QUDT URI`
+- `resources/bsdd/ifc4.3-uri-cache.json` für IFC-/bSDD-Identifier
+
+Damit darf die GitHub-Validierung nicht von lokalen Dateien unter `/home/...` oder anderen persönlichen Arbeitsverzeichnissen abhängen.
+
+Lernpunkt aus `unknown_qudt_unit_uri` für `http://qudt.org/vocab/unit/M2`: Die URI ist gültig und im QUDT-Referenzartefakt vorhanden. Der Fehler entstand, weil die frühere Validator-Konfiguration auf eine lokale QUDT-Datei ausserhalb des Repositories zeigte. In einer reproduzierbaren GitHub-Umgebung war diese Datei nicht garantiert vorhanden; dadurch wurde die lokale Referenzmenge leer oder abweichend aufgebaut und `M2` konnte fälschlich als unbekannt erscheinen.
+
+## H. Ergebnisse
 
 Der Validator liefert drei Arten von Resultaten:
 
