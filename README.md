@@ -48,6 +48,7 @@ Die englischen Assignment-Spalten sind die führenden Eingabefelder. Die zugehö
 - eine **Validierungs-Pipeline**
 - eine **Schritt-für-Schritt-Anleitung**
 - ergänzende **deutschsprachige Dokumentation**
+- repo-lokale **Referenzartefakte** für reproduzierbare QUDT- und IFC-/bSDD-Prüfungen
 
 ## Womit Sie starten sollen
 
@@ -128,6 +129,15 @@ Wenn Sie bestehende Arbeitsmappen oder ältere Beispiele vergleichen, achten Sie
 ## Validierungs-Artefakte
 
 Wenn die Datei `pipeline_valid` ist, erzeugt die GitHub-Validierung zusätzlich eine validierte `.xlsx`-Artefaktdatei mit system-generierten Rückschreibungen, zum Beispiel für abgeleitete IDs und andere sichere Normalisierungen. Diese Datei wird zusammen mit den JSON- und Markdown-Berichten als GitHub-Artefakt hochgeladen.
+
+## Referenzartefakte
+
+Die Validierung muss ohne persönliche lokale Dateien reproduzierbar sein. Deshalb liegen die für externe URI-Prüfungen benötigten Referenzen im Repository:
+
+- `resources/qudt/units.ttl`
+- `resources/bsdd/ifc4.3-uri-cache.json`
+
+Der Validator darf für die GitHub-Pipeline nicht auf lokale Pfade wie `/home/...` zeigen.
 
 ## Wichtiger Nutzen
 

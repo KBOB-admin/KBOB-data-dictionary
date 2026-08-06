@@ -16,10 +16,10 @@ try:
 except ImportError:
     from readers.excel_reader import load_dd
 
-WORKSPACE = Path('/home/Dave/.openclaw/workspace-datadict')
-BSDD_TTL = Path('/home/Dave/.openclaw/shared/ontologies/bsdd/ifc4.3-bsdd-harvested-official-api.ttl.tmp')
-BSDD_URI_CACHE = Path('/home/Dave/.openclaw/shared/ontologies/bsdd/ifc4.3-uri-cache.json')
-QUDT_UNITS_TTL = Path('/home/Dave/.openclaw/shared/ontologies/qudt/units.ttl')
+REPO_ROOT = Path(__file__).resolve().parents[2]
+RESOURCE_DIR = REPO_ROOT / 'resources'
+BSDD_URI_CACHE = RESOURCE_DIR / 'bsdd' / 'ifc4.3-uri-cache.json'
+QUDT_UNITS_TTL = RESOURCE_DIR / 'qudt' / 'units.ttl'
 VALID_BSDD_URI_PREFIXES = (
     'https://identifier.buildingsmart.org/uri/buildingsmart/ifc/',
 )
@@ -304,14 +304,8 @@ class Validator:
                 return set(payload.get('uris', []))
             except Exception:
                 pass
-        if not BSDD_TTL.exists():
-            return set()
-        uris = set()
-        with BSDD_TTL.open('r', encoding='utf-8', errors='ignore') as f:
-            for line in f:
-                for m in uri_re.findall(line):
-                    uris.add(m)
-        return uris
+        self.add('warning', 'bsdd_reference_missing', f'bSDD URI cache not found: {BSDD_URI_CACHE}')
+        return set()
 
     def _load_rules_multilingual_lookup(self, canonical_header: str, translations: list[tuple[str, str]]) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
         ws = self.wb['Rules'] if 'Rules' in self.wb.sheetnames else None
@@ -432,14 +426,23 @@ class Validator:
 
         uri, uri_row = core_rows.get('DictionaryUri', (None, None))
         expected_uri = None
+        accepted_uris = set()
         if org_code and dictionary_code:
             if self.has_public_dictionary():
                 expected_uri = f'https://lindas.admin.ch/{org_code}/{dictionary_code}'
+                accepted_uris.add(expected_uri)
+                accepted_uris.add(f'https://lindas.admin.ch/fobl/kbob/{org_code.lower()}/{dictionary_code}')
+                if version and SEMVER_RE.match(str(version)):
+                    accepted_uris.add(f'{expected_uri}/{version}')
+                    accepted_uris.add(f'https://lindas.admin.ch/fobl/kbob/{org_code.lower()}/{dictionary_code}/{version}')
             else:
                 expected_uri = f'https://example.com/{org_code}/{dictionary_code}'
+                accepted_uris.add(expected_uri)
+                if version and SEMVER_RE.match(str(version)):
+                    accepted_uris.add(f'{expected_uri}/{version}')
             if not uri:
                 self.add_normalization(core_sheet, uri_row or code_row or org_row, 'DictionaryUri', uri, expected_uri, 'Derived DictionaryUri based on OrganizationCode and DictionaryCode', 'derived-dictionary-uri', True)
-            elif uri != expected_uri:
+            elif uri not in accepted_uris:
                 self.add('warning', 'noncanonical_dictionary_uri', f'DictionaryUri differs from the canonical derived URI {expected_uri}.', sheet=core_sheet, row=uri_row)
         if uri and not self.is_absolute_uri(uri):
             self.add('error', 'invalid_uri', f'DictionaryUri is not a valid absolute IRI: {uri}', sheet=core_sheet)

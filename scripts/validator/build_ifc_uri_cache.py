@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import time
 from pathlib import Path
 
-SOURCE_TTL = Path('/home/Dave/.openclaw/shared/ontologies/bsdd/ifc4.3-bsdd-harvested-official-api.ttl.tmp')
-CACHE_JSON = Path('/home/Dave/.openclaw/shared/ontologies/bsdd/ifc4.3-uri-cache.json')
+REPO_ROOT = Path(__file__).resolve().parents[2]
+CACHE_JSON = REPO_ROOT / 'resources' / 'bsdd' / 'ifc4.3-uri-cache.json'
 URI_RE = re.compile(r'https://identifier\.buildingsmart\.org/uri/buildingsmart/ifc/4\.3(?:\.0)?/[^\s<>"]+')
 
 
-def build_cache(source: Path = SOURCE_TTL, target: Path = CACHE_JSON) -> dict:
+def build_cache(source: Path, target: Path = CACHE_JSON) -> dict:
+    if not source.exists():
+        raise FileNotFoundError(f'bSDD source TTL not found: {source}')
     start = time.time()
     uris = set()
     with source.open('r', encoding='utf-8', errors='ignore') as f:
@@ -31,11 +34,16 @@ def build_cache(source: Path = SOURCE_TTL, target: Path = CACHE_JSON) -> dict:
 
 
 if __name__ == '__main__':
-    payload = build_cache()
+    parser = argparse.ArgumentParser(description='Build the repository-local IFC/bSDD URI cache from a harvested bSDD TTL.')
+    parser.add_argument('--source', required=True, help='Path to the harvested bSDD TTL source file.')
+    parser.add_argument('--cache', default=str(CACHE_JSON), help='Path to write the URI cache JSON.')
+    args = parser.parse_args()
+    cache_path = Path(args.cache)
+    payload = build_cache(Path(args.source), cache_path)
     print(json.dumps({
         'source': payload['source'],
-        'cache': str(CACHE_JSON),
+        'cache': str(cache_path),
         'uri_count': payload['uri_count'],
         'elapsed_seconds': payload['elapsed_seconds'],
-        'cache_size_bytes': CACHE_JSON.stat().st_size,
+        'cache_size_bytes': cache_path.stat().st_size,
     }, indent=2))

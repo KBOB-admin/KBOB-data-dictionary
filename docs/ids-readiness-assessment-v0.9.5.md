@@ -17,11 +17,13 @@ Inspected implementation:
 - `scripts/validator/validate_strukturvorlage.py`
 - `scripts/validator/readers/current_template_reader.py`
 
-## Verdict
+## Revised Verdict
 
-Option B/C applies.
+Option C applies for reusable Data Dictionary templates, with a separate IDS Creator needed for project-specific IDS composition.
 
-The current templates can support a useful IDS subset, but they are not sufficient for unambiguous, governance-grade IDS generation without an explicit authoring extension.
+The current templates can support a useful IDS starting-point subset, but they should not be extended with global project-specific requirement cardinality fields unless a publisher intentionally wants to publish normative IDS defaults.
+
+`Data Dictionary` and `Data Template` resources should remain reusable governed source artefacts. `Required`, `Optional` and `Prohibited` are normally user-, project- or exchange-specific choices and should be authored in a separate IDS working configuration.
 
 ## What Is Available
 
@@ -36,20 +38,17 @@ The current authoring model and RDF mapper provide:
 - Enumeration schemes and selected allowed-value subsets.
 - Related Documents and LOIN metadata.
 
-## Blocking Gaps
+## Reclassified Gaps
 
-The current templates do not explicitly publish:
+The current templates do not explicitly publish project-specific IDS requirement choices:
 
 - required versus optional semantics;
-- minimum cardinality;
-- maximum cardinality;
-- repeatability;
 - prohibited semantics;
 - a clear authoring rule that maps matrix `x` to required or optional.
 
-The validator confirms this gap: `validate_matrix()` checks row/property resolvability, allowed-value overrides, Status, Version date and Provenance, but does not validate IDS obligation or cardinality fields because they do not exist.
+This is no longer treated as a blocking Data Template defect. A matrix `x` means "included in this reusable Data Template", not "required in every IDS".
 
-The current reader sets `DDClassProperty.is_required=True` for every populated matrix cell. That is an implementation default, not a documented authoring rule, and should not be treated as a normative IDS source.
+The current reader sets `DDClassProperty.is_required=True` for every populated matrix cell. That is an implementation default and must not be treated as a normative IDS cardinality source.
 
 ## Supported IDS Subset Without Template Extension
 
@@ -62,35 +61,25 @@ A generated IDS can safely include:
 - datatype and unit constraints where mapped;
 - specification metadata from Data Template, Data Dictionary and source workbook metadata.
 
-This subset loses reliable distinction between required and optional Properties, cannot represent repeatability or cardinality, and may overstate requirements if every matrix inclusion is interpreted as mandatory.
+This subset is suitable for prepopulating an IDS Creator. It loses reliable distinction between required, optional and prohibited Properties only if an application tries to generate a finished IDS directly from the Data Template without user configuration.
 
-## Minimal Template Extension Proposal
+## Paused Template Extension
 
-Add a small IDS authoring block to `Data_Template`, after the existing property assignment matrix and before `Document - Designation/Bezeichnung/Désignation/Designazione` when document columns are present, otherwise before `LOIN` or `Governance`.
+Do not add these previously proposed global fields to the canonical v0.9.5 Data Dictionary templates:
 
-Fields:
+- `IDS Requirement`
+- `Minimum occurrences`
+- `Maximum occurrences`
 
-| Field | Allowed values | Required | RDF predicate | IDS mapping |
-| --- | --- | --- | --- | --- |
-| `IDS Requirement` | `Required`, `Optional`, `Prohibited` | Optional, default unset | `dd:idsRequirementLevel` | property facet obligation / generation rule |
-| `Minimum occurrences` | integer `0..n` | Optional unless `IDS Requirement = Required` | `dd:minCardinality` | IDS cardinality lower bound where supported |
-| `Maximum occurrences` | integer `1..n` or `unbounded` | Optional | `dd:maxCardinality` | IDS cardinality upper bound where supported |
+The official buildingSMART IDS XSD `version="1.0.0"` exposes a `cardinality` attribute on requirement facets, with values `required`, `optional` and `prohibited`. It does not expose a general user-facing `minOccurs` / `maxOccurs` property-requirement model for this MVP. Minimum/maximum occurrence controls should therefore not be added unless a future target schema or validator workflow justifies them explicitly.
 
-Validation rules:
-
-- `IDS Requirement` must come from `Rules.IDS Requirement`.
-- `Required` requires `Minimum occurrences >= 1`.
-- `Optional` permits `Minimum occurrences = 0` or blank.
-- `Prohibited` requires `Maximum occurrences = 0` or blank with mapper emitting a prohibited facet only if supported.
-- `Maximum occurrences` must be greater than or equal to `Minimum occurrences`, except `unbounded`.
-- Existing workbooks with blank fields remain valid but IDS readiness is `Ready with limitations` or `Not ready` depending on the generation mode.
-
-Migration impact:
-
-- Existing populated workbooks do not break.
-- Existing matrix `x` values keep their current inclusion meaning.
-- IDS generation remains disabled or limitation-marked until the new fields are populated for a Data Template.
+Normative publisher defaults may still be useful in the future, but they should be optional defaults that the IDS Creator can import and override, not mandatory Data Template semantics.
 
 ## Recommendation
 
-Do not change the canonical templates until this proposal is accepted or revised. After acceptance, update both public and non-public templates, validator, reader, RDF mapper, i14y diagnostics, Explorer readiness messages and tests in the same change set.
+Do not change the canonical templates for project-specific IDS requirement cardinality. Build IDS generation through a dedicated IDS Creator:
+
+1. import a `Data Template` as a reusable baseline;
+2. copy its Class, IFC applicability, included Properties, Enumeration subsets, datatypes, units and Documents into IDS working state;
+3. require the user to choose `required`, `optional` or `prohibited` for each selected requirement;
+4. generate and validate `.ids` from that working state.

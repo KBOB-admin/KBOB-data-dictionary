@@ -9,6 +9,7 @@ on:
       - 'scripts/validator/validate_strukturvorlage.py'
       - 'scripts/validator/run_github_validation.py'
       - 'scripts/validator/readers/**/*.py'
+      - 'resources/**'
       - '.github/workflows/validate-data-dictionary.yml'
   pull_request:
     paths:
@@ -16,6 +17,7 @@ on:
       - 'scripts/validator/validate_strukturvorlage.py'
       - 'scripts/validator/run_github_validation.py'
       - 'scripts/validator/readers/**/*.py'
+      - 'resources/**'
       - '.github/workflows/validate-data-dictionary.yml'
   workflow_dispatch:
     inputs:
