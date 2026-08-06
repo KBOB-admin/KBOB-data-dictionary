@@ -428,13 +428,14 @@ class Validator:
         expected_uri = None
         accepted_uris = set()
         if org_code and dictionary_code:
+            org_uri_code = org_code.lower()
             if self.has_public_dictionary():
-                expected_uri = f'https://lindas.admin.ch/{org_code}/{dictionary_code}'
+                expected_uri = f'https://lindas.admin.ch/{org_uri_code}/{dictionary_code}'
                 accepted_uris.add(expected_uri)
-                accepted_uris.add(f'https://lindas.admin.ch/fobl/kbob/{org_code.lower()}/{dictionary_code}')
+                accepted_uris.add(f'https://lindas.admin.ch/fobl/kbob/{org_uri_code}/{dictionary_code}')
                 if version and SEMVER_RE.match(str(version)):
                     accepted_uris.add(f'{expected_uri}/{version}')
-                    accepted_uris.add(f'https://lindas.admin.ch/fobl/kbob/{org_code.lower()}/{dictionary_code}/{version}')
+                    accepted_uris.add(f'https://lindas.admin.ch/fobl/kbob/{org_uri_code}/{dictionary_code}/{version}')
             else:
                 expected_uri = f'https://example.com/{org_code}/{dictionary_code}'
                 accepted_uris.add(expected_uri)

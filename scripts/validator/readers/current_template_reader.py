@@ -137,10 +137,10 @@ def _parse_header(ws, meta: DictionaryMeta) -> DictionaryMeta:
 
 
 def _lindas_base(meta: DictionaryMeta) -> str:
-    org1 = (meta.raw.get('OrganizationCodeLindas') or meta.raw.get('OrganizationCode') or meta.org_code or 'ORG').upper()
-    org2 = (meta.raw.get('OrganizationSubCode') or meta.raw.get('OrganizationCode') or meta.org_code or org1).upper()
+    org1 = (meta.raw.get('OrganizationCodeLindas') or meta.raw.get('OrganizationCode') or meta.org_code or 'org').lower()
+    org2 = (meta.raw.get('OrganizationSubCode') or meta.raw.get('OrganizationCode') or meta.org_code or org1).lower()
     dd_code = (meta.raw.get('DictionaryCode') or meta.raw.get('DictionaryName (EN)') or meta.raw.get('DictionaryName (DE)') or 'dd').strip()
-    dd_code = slugify(dd_code).upper().replace('-', '_')
+    dd_code = slugify(dd_code).lower().replace('-', '_')
     return f'https://lindas.admin.ch/{org1}/{org2}/{dd_code}/'
 
 
