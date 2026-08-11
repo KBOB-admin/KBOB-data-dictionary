@@ -1,0 +1,46 @@
+{
+  "workbook": "/home/Dave/.openclaw/workspace-datadict/P_workspace_codat3_validator/templates/Strukturvorlage_DataDictionary_empty_v1.0.0_new.xlsx",
+  "summary": {
+    "parser_valid": false,
+    "pipeline_valid": false,
+    "governance_valid": false,
+    "errors": 4,
+    "warnings": 0,
+    "normalizations": 0
+  },
+  "findings": [
+    {
+      "level": "error",
+      "code": "missing_dictionary_field",
+      "message": "Erforderlicher Header-Wert fehlt: OrganizationCode",
+      "sheet": "Header",
+      "cell": null,
+      "row": 4
+    },
+    {
+      "level": "error",
+      "code": "missing_dictionary_field",
+      "message": "Erforderlicher Header-Wert fehlt: DictionaryName (EN)",
+      "sheet": "Header",
+      "cell": null,
+      "row": 6
+    },
+    {
+      "level": "error",
+      "code": "missing_dictionary_field",
+      "message": "Erforderlicher Header-Wert fehlt: DictionaryVersion",
+      "sheet": "Header",
+      "cell": null,
+      "row": 10
+    },
+    {
+      "level": "error",
+      "code": "missing_dictionary_field",
+      "message": "Erforderlicher Header-Wert fehlt: LifecycleStatus",
+      "sheet": "Header",
+      "cell": null,
+      "row": 14
+    }
+  ],
+  "normalizations": []
+}
