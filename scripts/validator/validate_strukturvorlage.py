@@ -1355,8 +1355,8 @@ class Validator:
                         self.add('error', 'matrix_missing_version_date', 'Data_Template.Version date is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
                     elif not ISO_DT_RE.match(governance_version_date):
                         self.add('error', 'matrix_invalid_version_date', f'Data_Template.Version date should be ISO 8601 date-time with timezone, got: {governance_version_date}', sheet=matrix_sheet, row=ridx)
-                if not governance_prov:
-                    self.add('error', 'matrix_missing_provenance', 'Data_Template.Provenance (PROV) is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
+                    if not governance_prov:
+                        self.add('error', 'matrix_missing_provenance', 'Data_Template.Provenance (PROV) is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
 
             # v1.0.0+: Validate document relation columns for this Data_Template row
             if 'doc_relation_pairs' in locals() and doc_relation_pairs:
