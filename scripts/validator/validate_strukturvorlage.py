@@ -610,6 +610,9 @@ class Validator:
             status = self._cell(row, headers.get('Status', 17))
             version_date = self._cell(row, headers.get('Version date', 18))
             prov = self._cell(row, headers.get('Provenance (PROV)', 19))
+            # v1.0.0+: RelatedDocument columns for Values
+            related_document = self._cell(row, headers.get('RelatedDocumentName (EN)', 21))
+            related_document_item = self._cell(row, headers.get('RelatedDocumentItemReference', 22))
             if not any([katalog_id, label_de, label_fr, label_it, label_en, values_en_raw, values_de_raw, values_fr_raw, values_it_raw, status, version_date, prov]):
                 continue
             expected_id = f"{self.slugify(label_en).replace('-', '_')}_enum" if label_en else None
@@ -655,6 +658,17 @@ class Validator:
                 self.add('error', 'invalid_value_catalog_version_date', f'Values.Version date should be ISO 8601 date-time with timezone, got: {version_date}', sheet=sheet_name, row=idx)
             if not prov:
                 self.add('error', 'missing_value_provenance', 'Values.Provenance (PROV) is required.', sheet=sheet_name, row=idx)
+            # v1.0.0+: Validate RelatedDocument references for Values
+            doc_item_refs = self.get_document_item_references()
+            if related_document:
+                if related_document not in doc_item_refs:
+                    self.add('error', 'unknown_related_document_id', f'RelatedDocumentName (EN) must reference an existing Documents.DocumentName (EN). Got: {related_document}', sheet=sheet_name, row=idx)
+                elif related_document_item:
+                    valid_items = doc_item_refs.get(related_document, set())
+                    if valid_items and related_document_item not in valid_items:
+                        self.add('error', 'invalid_document_item_reference', f'RelatedDocumentItemReference {related_document_item} not found in document {related_document}. Valid items: {valid_items}', sheet=sheet_name, row=idx)
+            if related_document_item and not related_document:
+                self.add('warning', 'document_item_without_document', 'RelatedDocumentItemReference is filled but RelatedDocumentName (EN) is empty. Document reference required.', sheet=sheet_name, row=idx)
 
     def validate_merkmalsgruppenkatalog(self):
         sheet_name = self._groups_sheet()
@@ -675,6 +689,9 @@ class Validator:
             status = self._cell(row, headers.get('Status', 12))
             version_date = self._cell(row, headers.get('Version date', 13))
             prov = self._cell(row, headers.get('Provenance (PROV)', 14))
+            # v1.0.0+: RelatedDocument columns for GroupOfProperties
+            related_document = self._cell(row, headers.get('RelatedDocumentName (EN)', 16))
+            related_document_item = self._cell(row, headers.get('RelatedDocumentItemReference', 17))
             if not any([group_id, group_code, group_en, desc_en, label_de, label_fr, label_it, status, version_date, prov]):
                 continue
             if group_id and group_id in seen_ids:
@@ -718,6 +735,17 @@ class Validator:
                 self.add('error', 'invalid_group_version_date', f'GroupOfProperties.Version date should be ISO 8601 date-time with timezone, got: {version_date}', sheet=sheet_name, row=idx)
             if not prov:
                 self.add('error', 'missing_group_provenance', 'GroupOfProperties.Provenance (PROV) is required.', sheet=sheet_name, row=idx)
+            # v1.0.0+: Validate RelatedDocument references for GroupOfProperties
+            doc_item_refs = self.get_document_item_references()
+            if related_document:
+                if related_document not in doc_item_refs:
+                    self.add('error', 'unknown_related_document_id', f'RelatedDocumentName (EN) must reference an existing Documents.DocumentName (EN). Got: {related_document}', sheet=sheet_name, row=idx)
+                elif related_document_item:
+                    valid_items = doc_item_refs.get(related_document, set())
+                    if valid_items and related_document_item not in valid_items:
+                        self.add('error', 'invalid_document_item_reference', f'RelatedDocumentItemReference {related_document_item} not found in document {related_document}. Valid items: {valid_items}', sheet=sheet_name, row=idx)
+            if related_document_item and not related_document:
+                self.add('warning', 'document_item_without_document', 'RelatedDocumentItemReference is filled but RelatedDocumentName (EN) is empty. Document reference required.', sheet=sheet_name, row=idx)
         self._check_unique_labels(seen_labels, sheet_name, 'duplicate_group_label', 'Property-group label')
 
     def _check_unique_labels(self, registry: dict[str, list[tuple[str, int]]], sheet_name: str, error_code: str, label_name: str):
@@ -742,15 +770,7 @@ class Validator:
         seen_codes, seen_labels = set(), {}
         dd = self.get_dd()
         ifc_uri_set = self.get_ifc_uri_set()
-        document_name_en_set = set()
-        documents_sheet = self._documents_sheet()
-        if documents_sheet in self.wb.sheetnames:
-            documents_ws = self.wb[documents_sheet]
-            documents_headers = self._sheet_headers(documents_sheet)
-            for doc_idx, doc_row in self._iter_data_rows(documents_ws, self._sheet_start_row(documents_sheet)):
-                doc_name_en = self._cell(doc_row, documents_headers.get('DocumentName (EN)', 7))
-                if doc_name_en:
-                    document_name_en_set.add(doc_name_en)
+        # v1.0.0+: Document references are now validated via get_document_item_references()
         object_class_allowed = self._load_dropdown_values('Class-Assignment')
         status_allowed = self._load_dropdown_values('Status')
         for idx, row in self._iter_data_rows(ws, self._sheet_start_row(sheet_name)):
@@ -777,6 +797,8 @@ class Validator:
             version_date = self._cell(row, headers.get('Version date', 32 if self.has_public_dictionary() else 31))
             source = self._cell(row, headers.get('Provenance (PROV)', 33 if self.has_public_dictionary() else 32))
             related_document = self._cell(row, headers.get('RelatedDocumentName (EN)', 35 if self.has_public_dictionary() else 34))
+            # v1.0.0+: RelatedDocumentItemReference column
+            related_document_item = self._cell(row, headers.get('RelatedDocumentItemReference', 36 if self.has_public_dictionary() else 35))
             self._require_en_plus_one_local(row, idx, sheet_name, headers.get('Designation (EN)', 15), {'DE': headers.get('Bezeichnung (DE)', 16), 'IT': headers.get('Designazione (IT)', 18), 'FR': headers.get('Désignation (FR)', 17)}, 'Classes.Bezeichnung/Designation')
             self._require_en_plus_one_local(row, idx, sheet_name, headers.get('Description (EN)', 19), {'DE': headers.get('Beschreibung (DE)', 20), 'IT': headers.get('Descrizione (IT)', 22), 'FR': headers.get('Description (FR)', 21)}, 'Classes.Beschreibung/Description')
             for lang, value in [('DE', label_de), ('EN', label_en), ('FR', label_fr), ('IT', label_it)]:
@@ -851,8 +873,20 @@ class Validator:
             self.validate_predefined_type(ifc_obj, predefined, ifc_uri, sheet_name, idx)
             if not source:
                 self.add('error', 'missing_prov_source', 'Classes.Provenance (PROV) is required.', sheet=sheet_name, row=idx)
-            if related_document and document_name_en_set and related_document not in document_name_en_set:
-                self.add('error', 'unknown_related_document_id', f'RelatedDocumentName (EN) must reference an existing Documents.DocumentName (EN). Got: {related_document}', sheet=sheet_name, row=idx)
+            # v1.0.0+: Validate RelatedDocument references with proper item reference checking
+            doc_item_refs = self.get_document_item_references()
+            if related_document:
+                if related_document not in doc_item_refs:
+                    self.add('error', 'unknown_related_document_id', f'RelatedDocumentName (EN) must reference an existing Documents.DocumentName (EN). Got: {related_document}', sheet=sheet_name, row=idx)
+                elif related_document_item:
+                    # Validate that the item reference exists in the referenced document
+                    # Allow if document has no item references defined (backward compatibility)
+                    # or if the specific item reference exists
+                    valid_items = doc_item_refs.get(related_document, set())
+                    if valid_items and related_document_item not in valid_items:
+                        self.add('error', 'invalid_document_item_reference', f'RelatedDocumentItemReference {related_document_item} not found in document {related_document}. Valid items: {valid_items}', sheet=sheet_name, row=idx)
+            if related_document_item and not related_document:
+                self.add('warning', 'document_item_without_document', 'RelatedDocumentItemReference is filled but RelatedDocumentName (EN) is empty. Document reference required.', sheet=sheet_name, row=idx)
             if ifc_obj and (not self._extract_base_ifc_entity(ifc_obj) or (ifc_uri_set and f'https://identifier.buildingsmart.org/uri/buildingsmart/ifc/4.3/class/{self._extract_base_ifc_entity(ifc_obj)}' not in ifc_uri_set)):
                 self.add('error', 'invalid_ifc_object_entity', f'IfcObject Entity must be a valid IFC entity. Got: {ifc_obj}', sheet=sheet_name, row=idx)
             if ifc_type and (not self._extract_base_ifc_entity(ifc_type) or (ifc_uri_set and f'https://identifier.buildingsmart.org/uri/buildingsmart/ifc/4.3/class/{self._extract_base_ifc_entity(ifc_type)}' not in ifc_uri_set)):
@@ -906,6 +940,9 @@ class Validator:
             status = self._cell(row, headers.get('Status', 32))
             version_date = self._cell(row, headers.get('Version date', 33))
             prov = self._cell(row, headers.get('Provenance (PROV)', 34))
+            # v1.0.0+: RelatedDocument columns for Properties
+            related_document = self._cell(row, headers.get('RelatedDocumentName (EN)', 36))
+            related_document_item = self._cell(row, headers.get('RelatedDocumentItemReference', 37))
             self._require_en_plus_one_local(row, idx, sheet_name, headers.get('Designation (EN)', 11), {'DE': headers.get('Bezeichnung (DE)', 12), 'IT': headers.get('Designazione (IT)', 14), 'FR': headers.get('Désignation (FR)', 13)}, 'Properties.Bezeichnung/Designation')
             self._require_en_plus_one_local(row, idx, sheet_name, headers.get('Description (EN)', 15), {'DE': headers.get('Beschreibung (DE)', 16), 'IT': headers.get('Descrizione (IT)', 18), 'FR': headers.get('Description (FR)', 17)}, 'Properties.Beschreibung/Description')
             for lang, value in [('DE', label_de), ('EN', label_en), ('FR', label_fr), ('IT', label_it)]:
@@ -996,6 +1033,17 @@ class Validator:
                 self.add('error', 'invalid_property_version_date', f'Properties.Version date should be ISO 8601 date-time with timezone, got: {version_date}', sheet=sheet_name, row=idx)
             if not prov:
                 self.add('error', 'missing_property_provenance', 'Properties.Provenance (PROV) is required.', sheet=sheet_name, row=idx)
+            # v1.0.0+: Validate RelatedDocument references for Properties
+            doc_item_refs = self.get_document_item_references()
+            if related_document:
+                if related_document not in doc_item_refs:
+                    self.add('error', 'unknown_related_document_id', f'RelatedDocumentName (EN) must reference an existing Documents.DocumentName (EN). Got: {related_document}', sheet=sheet_name, row=idx)
+                elif related_document_item:
+                    valid_items = doc_item_refs.get(related_document, set())
+                    if valid_items and related_document_item not in valid_items:
+                        self.add('error', 'invalid_document_item_reference', f'RelatedDocumentItemReference {related_document_item} not found in document {related_document}. Valid items: {valid_items}', sheet=sheet_name, row=idx)
+            if related_document_item and not related_document:
+                self.add('warning', 'document_item_without_document', 'RelatedDocumentItemReference is filled but RelatedDocumentName (EN) is empty. Document reference required.', sheet=sheet_name, row=idx)
             if unit_qudt:
                 if not self.is_absolute_uri(unit_qudt):
                     self.add('error', 'invalid_qudt_unit_uri', f'QUDT URI is not a valid absolute IRI: {unit_qudt}', sheet=sheet_name, row=idx)
@@ -1018,6 +1066,44 @@ class Validator:
                                     if canonical:
                                         self.add_normalization(sheet_name, idx, column_label, raw_name, canonical, 'Manual unit label overridden by local QUDT rdfs:label', 'derived-qudt-unit-label', True)
         self._check_unique_labels(seen_labels, sheet_name, 'duplicate_property_label', 'Property label')
+
+    def get_document_item_references(self) -> dict[str, set[str]]:
+        """Build mapping of DocumentName (EN) -> {DocumentItemReference values}
+        
+        v1.0.0+: Used to validate that RelatedDocumentItemReference in Classes, Properties,
+        Values, and GroupOfProperties exists in the corresponding document.
+        """
+        if hasattr(self, '_document_item_ref_map'):
+            return self._document_item_ref_map
+        
+        self._document_item_ref_map = {}
+        self._document_name_en_set = set()
+        
+        documents_sheet = self._documents_sheet()
+        if documents_sheet not in self.wb.sheetnames:
+            return self._document_item_ref_map
+        
+        documents_ws = self.wb[documents_sheet]
+        documents_headers = self._sheet_headers(documents_sheet)
+        
+        # Get column indices
+        doc_name_col = documents_headers.get('DocumentName (EN)', 7)
+        doc_item_ref_col = documents_headers.get('DocumentItemReference')
+        
+        for doc_idx, doc_row in self._iter_data_rows(documents_ws, self._sheet_start_row(documents_sheet)):
+            doc_name_en = self._cell(doc_row, doc_name_col)
+            doc_item_ref = self._cell(doc_row, doc_item_ref_col) if doc_item_ref_col else None
+            
+            if doc_name_en:
+                self._document_name_en_set.add(doc_name_en)
+                # Initialize set for this document
+                if doc_name_en not in self._document_item_ref_map:
+                    self._document_item_ref_map[doc_name_en] = set()
+                # Add item reference if present (None represents any/empty reference)
+                if doc_item_ref:
+                    self._document_item_ref_map[doc_name_en].add(str(doc_item_ref).strip())
+        
+        return self._document_item_ref_map
 
     def validate_documents(self):
         sheet_name = self._documents_sheet()
