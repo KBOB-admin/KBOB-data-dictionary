@@ -1238,20 +1238,24 @@ class Validator:
                 norm = self._norm(val)
                 if norm:
                     group_label_map[norm] = val
+        # Build a mapping of normalized row-2 headers -> column index
         row2_headers = {self._norm(ws.cell(2, c).value): c for c in range(1, ws.max_column + 1) if self._norm(ws.cell(2, c).value)}
         property_anchor = row2_headers.get(self._norm('Property - Designation/Bezeichnung/Désignation/Designazione')) or 5
-        document_anchor = row2_headers.get(self._norm('Document - Designation/Bezeichnung/Désignation/Designazione'))
+        # New v1.0.0 structure: detect related-document anchors dynamically in row 2
+        related_doc_anchor = row2_headers.get(self._norm('RelatedDocumentName (EN)'))
+        related_doc_item_anchor = row2_headers.get(self._norm('RelatedDocumentItemReference'))
         governance_anchor = row2_headers.get(self._norm('Governance'))
         loin_anchor = row2_headers.get(self._norm('LOIN'))
         property_start_col = property_anchor + 1
-        if document_anchor and document_anchor > property_start_col:
-            property_end_col = document_anchor - 1
-        elif loin_anchor and loin_anchor > property_start_col:
-            property_end_col = loin_anchor - 1
-        elif governance_anchor and governance_anchor > property_start_col:
-            property_end_col = governance_anchor - 1
-        else:
-            property_end_col = ws.max_column
+        # Determine property_end_col: properties run up to the start of the related-document block (if present)
+        candidates = []
+        if related_doc_anchor and related_doc_anchor > property_start_col:
+            candidates.append(related_doc_anchor - 1)
+        if loin_anchor and loin_anchor > property_start_col:
+            candidates.append(loin_anchor - 1)
+        if governance_anchor and governance_anchor > property_start_col:
+            candidates.append(governance_anchor - 1)
+        property_end_col = min(candidates) if candidates else ws.max_column
         structural_non_property_labels = {
             'Document - Designation/Bezeichnung/Désignation/Designazione',
             'Governance',
@@ -1283,6 +1287,34 @@ class Validator:
                 self.add('error', 'matrix_unknown_property_label', f'Data_Template property reference not found in Properties labels/IDs (DE/EN/FR/IT): {label}', sheet=matrix_sheet, row=2)
                 continue
             property_cols.append((col_idx, prop_code, label))
+
+        # v1.0.0+: Determine document-relation columns dynamically
+        # Columns between the RelatedDocumentName (EN) anchor and the RelatedDocumentItemReference anchor
+        # represent document relation fields. Columns immediately after RelatedDocumentItemReference
+        # are the corresponding item-reference fields. Both anchors are dynamic and may move.
+        doc_relation_pairs = []
+        try:
+            if related_doc_anchor and related_doc_item_anchor and related_doc_item_anchor > related_doc_anchor:
+                # relation columns are the columns after the related_doc_anchor up to (but not including) related_doc_item_anchor
+                doc_rel_cols = list(range(related_doc_anchor + 1, related_doc_item_anchor))
+                # item columns start after related_doc_item_anchor and run until the next structural anchor
+                doc_item_end_candidates = [ws.max_column]
+                if loin_anchor and loin_anchor > related_doc_item_anchor:
+                    doc_item_end_candidates.append(loin_anchor - 1)
+                if governance_anchor and governance_anchor > related_doc_item_anchor:
+                    doc_item_end_candidates.append(governance_anchor - 1)
+                doc_item_end_col = min(doc_item_end_candidates)
+                doc_item_cols = list(range(related_doc_item_anchor + 1, doc_item_end_col + 1))
+                # Pair up relation columns with item columns by position
+                pair_count = min(len(doc_rel_cols), len(doc_item_cols)) if doc_item_cols else len(doc_rel_cols)
+                for i in range(pair_count):
+                    rel_col = doc_rel_cols[i]
+                    item_col = doc_item_cols[i] if i < len(doc_item_cols) else None
+                    rel_label = self._cell([ws.cell(2, rel_col).value], 1)
+                    item_label = self._cell([ws.cell(2, item_col).value], 1) if item_col else None
+                    doc_relation_pairs.append((rel_col, item_col, rel_label, item_label))
+        except Exception:
+            doc_relation_pairs = []
         governance_status_col = (governance_anchor + 1) if governance_anchor else None
         governance_version_date_col = (governance_anchor + 2) if governance_anchor else None
         governance_prov_col = (governance_anchor + 3) if governance_anchor else None
@@ -1311,21 +1343,59 @@ class Validator:
                 overrides_cmp = {str(o).strip().casefold() for o in overrides}
                 if allowed and not overrides_cmp.issubset(allowed_cmp):
                     self.add('error', 'invalid_allowed_values_override', f'Data_Template override {overrides} is not a subset of the registered Values list for property {label} / {prop_code}.', sheet=matrix_sheet, row=ridx)
-            if governance_anchor and has_property_assignment:
-                governance_status = self._cell([ws.cell(ridx, governance_status_col).value], 1) if governance_status_col else None
-                governance_version_date = self._cell([ws.cell(ridx, governance_version_date_col).value], 1) if governance_version_date_col else None
-                governance_prov = self._cell([ws.cell(ridx, governance_prov_col).value], 1) if governance_prov_col else None
-                if not governance_status:
-                    self.add('error', 'matrix_missing_status', 'Data_Template.Status is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
-                elif dropdown_status and governance_status not in dropdown_status:
-                    self.add('error', 'matrix_invalid_status', f'Data_Template.Status must come from Rules.Status. Got: {governance_status}', sheet=matrix_sheet, row=ridx)
-                if not governance_version_date:
-                    self.add('error', 'matrix_missing_version_date', 'Data_Template.Version date is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
-                elif not ISO_DT_RE.match(governance_version_date):
-                    self.add('error', 'matrix_invalid_version_date', f'Data_Template.Version date should be ISO 8601 date-time with timezone, got: {governance_version_date}', sheet=matrix_sheet, row=ridx)
+                if governance_anchor and has_property_assignment:
+                    governance_status = self._cell([ws.cell(ridx, governance_status_col).value], 1) if governance_status_col else None
+                    governance_version_date = self._cell([ws.cell(ridx, governance_version_date_col).value], 1) if governance_version_date_col else None
+                    governance_prov = self._cell([ws.cell(ridx, governance_prov_col).value], 1) if governance_prov_col else None
+                    if not governance_status:
+                        self.add('error', 'matrix_missing_status', 'Data_Template.Status is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
+                    elif dropdown_status and governance_status not in dropdown_status:
+                        self.add('error', 'matrix_invalid_status', f'Data_Template.Status must come from Rules.Status. Got: {governance_status}', sheet=matrix_sheet, row=ridx)
+                    if not governance_version_date:
+                        self.add('error', 'matrix_missing_version_date', 'Data_Template.Version date is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
+                    elif not ISO_DT_RE.match(governance_version_date):
+                        self.add('error', 'matrix_invalid_version_date', f'Data_Template.Version date should be ISO 8601 date-time with timezone, got: {governance_version_date}', sheet=matrix_sheet, row=ridx)
                 if not governance_prov:
                     self.add('error', 'matrix_missing_provenance', 'Data_Template.Provenance (PROV) is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
 
+            # v1.0.0+: Validate document relation columns for this Data_Template row
+            if 'doc_relation_pairs' in locals() and doc_relation_pairs:
+                # build normalized document item refs map
+                doc_item_refs = self.get_document_item_references()
+                doc_item_refs_norm = {self._norm(k): {self._norm(vv) for vv in vals} for k, vals in doc_item_refs.items()}
+                # read the RelatedDocumentName value for this row (anchor column)
+                related_doc_value = None
+                if related_doc_anchor:
+                    related_doc_value = self._cell([ws.cell(ridx, related_doc_anchor).value], 1)
+                for rel_col, item_col, rel_label, item_label in doc_relation_pairs:
+                    try:
+                        rel_val = self._cell([ws.cell(ridx, rel_col).value], 1) if rel_col else None
+                        item_val = self._cell([ws.cell(ridx, item_col).value], 1) if item_col else None
+                    except Exception:
+                        rel_val = None
+                        item_val = None
+
+                    # If a relation value is present, RelatedDocumentName must be filled and valid
+                    if rel_val is not None and str(rel_val).strip() != '':
+                        if not related_doc_value:
+                            self.add('error', 'matrix_missing_related_document', 'Data_Template has document-relation value but RelatedDocumentName (EN) is empty.', sheet=matrix_sheet, row=ridx)
+                        else:
+                            norm_doc = self._norm(related_doc_value)
+                            if not norm_doc or norm_doc not in doc_item_refs_norm:
+                                self.add('error', 'matrix_unknown_related_document_id', f'Data_Template RelatedDocumentName (EN) must reference an existing Documents.DocumentName (EN). Got: {related_doc_value}', sheet=matrix_sheet, row=ridx)
+
+                    # If an item reference value is present, validate it against the referenced document's DocumentItemReference set
+                    if item_val is not None and str(item_val).strip() != '':
+                        if not related_doc_value:
+                            self.add('error', 'matrix_missing_related_document_for_item', 'Data_Template has RelatedDocumentItemReference value but RelatedDocumentName (EN) is empty.', sheet=matrix_sheet, row=ridx)
+                        else:
+                            norm_doc = self._norm(related_doc_value)
+                            item_norm = self._norm(item_val)
+                            valid_items = doc_item_refs_norm.get(norm_doc, set())
+                            # If document defines item refs, require match; otherwise allow (no item refs defined)
+                            if valid_items and item_norm not in valid_items:
+                                self.add('error', 'matrix_invalid_document_item_reference', f'Data_Template RelatedDocumentItemReference {item_val} not found in document {related_doc_value}.', sheet=matrix_sheet, row=ridx)
+        
     def validate_concept_relations(self):
         dd = self.get_dd()
         for idx, cr in enumerate(getattr(dd, 'concept_relations', []), start=5):
@@ -1397,6 +1467,63 @@ class Validator:
             },
             'findings': [asdict(f) for f in self.findings],
             'normalizations': self.normalizations,
+        }
+
+    def parse_datatemplate_structure(self) -> dict:
+        """Parse Data_Template row-2 anchors and determine property / document-relation column structure.
+
+        Returns a dict with keys:
+          - property_anchor, related_doc_anchor, related_doc_item_anchor
+          - property_start_col, property_end_col
+          - doc_relation_pairs: list of tuples (rel_col, item_col, rel_label, item_label)
+        """
+        sheet_name = self._matrix_sheet()
+        if sheet_name not in self.wb.sheetnames:
+            raise ValueError('Data_Template sheet not found')
+        ws = self.wb[sheet_name]
+        row2_headers = {self._norm(ws.cell(2, c).value): c for c in range(1, ws.max_column + 1) if self._norm(ws.cell(2, c).value)}
+        property_anchor = row2_headers.get(self._norm('Property - Designation/Bezeichnung/Désignation/Designazione')) or 5
+        related_doc_anchor = row2_headers.get(self._norm('RelatedDocumentName (EN)'))
+        related_doc_item_anchor = row2_headers.get(self._norm('RelatedDocumentItemReference'))
+        governance_anchor = row2_headers.get(self._norm('Governance'))
+        loin_anchor = row2_headers.get(self._norm('LOIN'))
+        property_start_col = property_anchor + 1
+        candidates = []
+        if related_doc_anchor and related_doc_anchor > property_start_col:
+            candidates.append(related_doc_anchor - 1)
+        if loin_anchor and loin_anchor > property_start_col:
+            candidates.append(loin_anchor - 1)
+        if governance_anchor and governance_anchor > property_start_col:
+            candidates.append(governance_anchor - 1)
+        property_end_col = min(candidates) if candidates else ws.max_column
+
+        # Build doc relation pairs
+        doc_relation_pairs = []
+        if related_doc_anchor and related_doc_item_anchor and related_doc_item_anchor > related_doc_anchor:
+            doc_rel_cols = list(range(related_doc_anchor + 1, related_doc_item_anchor))
+            # item columns run after related_doc_item_anchor until next structural anchor
+            doc_item_end_candidates = [ws.max_column]
+            if loin_anchor and loin_anchor > related_doc_item_anchor:
+                doc_item_end_candidates.append(loin_anchor - 1)
+            if governance_anchor and governance_anchor > related_doc_item_anchor:
+                doc_item_end_candidates.append(governance_anchor - 1)
+            doc_item_end_col = min(doc_item_end_candidates)
+            doc_item_cols = list(range(related_doc_item_anchor + 1, doc_item_end_col + 1))
+            pair_count = min(len(doc_rel_cols), len(doc_item_cols)) if doc_item_cols else len(doc_rel_cols)
+            for i in range(pair_count):
+                rel_col = doc_rel_cols[i]
+                item_col = doc_item_cols[i] if i < len(doc_item_cols) else None
+                rel_label = self._cell([ws.cell(2, rel_col).value], 1)
+                item_label = self._cell([ws.cell(2, item_col).value], 1) if item_col else None
+                doc_relation_pairs.append((rel_col, item_col, rel_label, item_label))
+
+        return {
+            'property_anchor': property_anchor,
+            'related_doc_anchor': related_doc_anchor,
+            'related_doc_item_anchor': related_doc_item_anchor,
+            'property_start_col': property_start_col,
+            'property_end_col': property_end_col,
+            'doc_relation_pairs': doc_relation_pairs,
         }
 
 
