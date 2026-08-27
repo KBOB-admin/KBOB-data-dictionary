@@ -134,20 +134,20 @@ def _default_meta(path: Path) -> DictionaryMeta:
     if "kbob" in stem:
         code = "kbob"
         uri = "https://www.kbob.admin.ch/dictionary/kbob"
-        de = "KBOB Datenkatalog"
+        de = "KBOB Data Dictionary"
         en = "KBOB Data Dictionary"
         dictionary_code = "kbob"
     elif "bdch" in stem:
         code = "bdch"
         uri = "https://bauen-digital.ch/dictionary/bdch"
-        de = "bDCH Datenkatalog"
+        de = "bDCH Data Dictionary"
         en = "bDCH Data Dictionary"
         dictionary_code = "bdch"
     else:
         code = "he-sem"
         dictionary_code = slugify(path.stem) or "he-dd"
         uri = f"https://he-sem.ch/dictionary/{dictionary_code}"
-        de = f"HE-DD Datenkatalog {path.stem}"
+        de = f"HE-DD Data Dictionary {path.stem}"
         en = f"HE-DD Data Dictionary {path.stem}"
     return DictionaryMeta(
         org_code=code,
