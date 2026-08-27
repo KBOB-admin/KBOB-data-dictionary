@@ -103,6 +103,10 @@ Der Validator prüft Verknüpfungen zwischen den Tabellen.
 Beispiele:
 
 - `Data_Template` muss auf vorhandene `Classes` und `Properties` verweisen,
+- jede befuellte `Data_Template`-Zeile muss in Spalte B eine stabile, kleingeschriebene und mit Bindestrichen strukturierte `DataTemplate-ID` enthalten,
+- dieselbe `DataTemplate-ID` darf ueber mehrere Zeilen wiederholt werden und bildet dadurch ein Data Template mit `0..n` unterschiedlichen `GroupOfProperties`,
+- alle Zeilen derselben `DataTemplate-ID` muessen auf dieselbe Class verweisen und identische Governance-Werte verwenden; unterschiedliche LOIN-Werte duerfen als mehrere kontextuelle Angaben aggregiert werden,
+- dieselbe Property darf innerhalb derselben Kombination aus `DataTemplate-ID` und GoP-Kontext nicht doppelt zugeordnet werden,
 - Referenzen auf Wertelisten müssen auf vorhandene `Values` zeigen,
 - Dokumentreferenzen müssen – wo vorgesehen – auf vorhandene `Documents` verweisen.
 
@@ -115,6 +119,13 @@ Bestimmte Felder werden zusätzlich formal geprüft.
 Dazu gehören zum Beispiel:
 
 - URI-Formatprüfungen,
+- `Classes.IFC_URI` und IFC-Entity-Felder werden für echte IFC-ausgerichtete Klassen geprüft; lokale Dokumenttyp-Taxonomieklassen, die als `Document type taxonomy` markiert sind, dürfen diese Felder leer lassen, weil sie keine exakten IFC-Objekt-/TypeObject-Entsprechungen darstellen,
+- `Header.DictionaryUri` verwendet vor einer Publikationsfreigabe eine neutrale, aus `OrganizationCode` und `DictionaryCode` abgeleitete `https://example.com/...`-URI,
+- eine LINDAS-URI wird niemals allein aus Workbook-Metadaten zugeteilt; sie wird erst nach einer expliziten Publikationsentscheidung eingetragen,
+- eine freigegebene LINDAS-URI muss die konkrete SemVer-Version am Ende enthalten und mit `Header.DictionaryVersion` übereinstimmen,
+- eine explizit freigegebene LINDAS-URI wird als autoritative Override-URI unverändert akzeptiert; der Validator leitet dafür keinen alternativen Namespace ab,
+- andere URI-Authorities sind für `Header.DictionaryUri` nicht zulässig,
+- `Header.I14yDatasetUri` ist optional und muss, falls gesetzt, eine absolute `i14y.admin.ch`-Dataset-URI sein; sie ist Metadatum und keine Dictionary-Identität,
 - Identifier- oder Code-Formate,
 - kontrollierte Werte aus Listen,
 - Konsistenz zwischen Feldern und Referenzen.

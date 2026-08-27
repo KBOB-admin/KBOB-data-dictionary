@@ -240,6 +240,12 @@ class Validator:
         if ifc_uri and ifc_uri != candidate_uri:
             self.add('error', 'ifc_uri_predefined_mismatch', f'IFC URI {ifc_uri} does not match the authoritative IFC predefined-type URI implied by IfcObject Entity + PredefinedType: {candidate_uri}', sheet=sheet_name, row=row_idx)
 
+    @staticmethod
+    def _is_non_ifc_taxonomy_class(category: str | None, provenance: str | None) -> bool:
+        category_text = str(category or '').strip().casefold()
+        provenance_text = str(provenance or '').strip().casefold()
+        return 'document type taxonomy' in category_text or 'dokumenttypenkatalog' in provenance_text
+
     def add(self, level: str, code: str, message: str, sheet: str | None = None, cell: str | None = None, row: int | None = None):
         self.findings.append(Finding(level, code, message, sheet, cell, row))
 
@@ -425,28 +431,74 @@ class Validator:
             self.add('error', 'invalid_semver', f'DictionaryVersion must be semantic version, got: {version}', sheet=core_sheet)
 
         uri, uri_row = core_rows.get('DictionaryUri', (None, None))
-        expected_uri = None
-        accepted_uris = set()
+        placeholder_uri = None
         if org_code and dictionary_code:
-            org_uri_code = org_code.lower()
-            if self.has_public_dictionary():
-                expected_uri = f'https://lindas.admin.ch/{org_uri_code}/{dictionary_code}'
-                accepted_uris.add(expected_uri)
-                accepted_uris.add(f'https://lindas.admin.ch/fobl/kbob/{org_uri_code}/{dictionary_code}')
-                if version and SEMVER_RE.match(str(version)):
-                    accepted_uris.add(f'{expected_uri}/{version}')
-                    accepted_uris.add(f'https://lindas.admin.ch/fobl/kbob/{org_uri_code}/{dictionary_code}/{version}')
-            else:
-                expected_uri = f'https://example.com/{org_code}/{dictionary_code}'
-                accepted_uris.add(expected_uri)
-                if version and SEMVER_RE.match(str(version)):
-                    accepted_uris.add(f'{expected_uri}/{version}')
-            if not uri:
-                self.add_normalization(core_sheet, uri_row or code_row or org_row, 'DictionaryUri', uri, expected_uri, 'Derived DictionaryUri based on OrganizationCode and DictionaryCode', 'derived-dictionary-uri', True)
-            elif uri not in accepted_uris:
-                self.add('warning', 'noncanonical_dictionary_uri', f'DictionaryUri differs from the canonical derived URI {expected_uri}.', sheet=core_sheet, row=uri_row)
-        if uri and not self.is_absolute_uri(uri):
+            placeholder_uri = f'https://example.com/{org_code}/{dictionary_code}'
+        if not uri and placeholder_uri:
+            self.add_normalization(
+                core_sheet,
+                uri_row or code_row or org_row,
+                'DictionaryUri',
+                uri,
+                placeholder_uri,
+                'Neutral pre-publication placeholder derived from OrganizationCode and DictionaryCode',
+                'derived-dictionary-uri',
+                True,
+            )
+        elif uri and not self.is_absolute_uri(uri):
             self.add('error', 'invalid_uri', f'DictionaryUri is not a valid absolute IRI: {uri}', sheet=core_sheet)
+        elif uri:
+            normalized_uri = uri.rstrip('/')
+            parsed_uri = urlparse(normalized_uri)
+            if parsed_uri.netloc == 'example.com':
+                if placeholder_uri and normalized_uri != placeholder_uri:
+                    self.add(
+                        'warning',
+                        'noncanonical_placeholder_dictionary_uri',
+                        f'Pre-publication placeholder differs from the derived neutral URI {placeholder_uri}.',
+                        sheet=core_sheet,
+                        row=uri_row,
+                    )
+                    self.add_normalization(
+                        core_sheet,
+                        uri_row,
+                        'DictionaryUri',
+                        uri,
+                        placeholder_uri,
+                        'Neutral placeholder derived from OrganizationCode and DictionaryCode',
+                        'canonical-placeholder-dictionary-uri',
+                        True,
+                    )
+            elif parsed_uri.netloc == 'lindas.admin.ch':
+                uri_version_match = re.search(r'/(\d+\.\d+\.\d+)$', normalized_uri)
+                if not uri_version_match:
+                    self.add(
+                        'error',
+                        'approved_lindas_uri_requires_version',
+                        'An approved LINDAS DictionaryUri must end with the explicit semantic release version.',
+                        sheet=core_sheet,
+                        row=uri_row,
+                    )
+                elif version and uri_version_match.group(1) != version:
+                    self.add(
+                        'error',
+                        'dictionary_uri_version_mismatch',
+                        f'DictionaryUri version {uri_version_match.group(1)} does not match DictionaryVersion {version}.',
+                        sheet=core_sheet,
+                        row=uri_row,
+                    )
+            else:
+                self.add(
+                    'error',
+                    'unsupported_dictionary_uri_authority',
+                    'DictionaryUri must use the neutral example.com placeholder or an explicitly approved lindas.admin.ch URI.',
+                    sheet=core_sheet,
+                    row=uri_row,
+                )
+
+        i14y_uri, i14y_uri_row = core_rows.get('I14yDatasetUri', (None, None))
+        if i14y_uri and (not self.is_absolute_uri(i14y_uri) or 'i14y.admin.ch/' not in i14y_uri):
+            self.add('error', 'invalid_i14y_dataset_uri', 'I14yDatasetUri must be an absolute i14y.admin.ch dataset URI when supplied.', sheet=core_sheet, row=i14y_uri_row)
 
         if public_sheet:
             contact_email = (public_rows.get('ContactEmail') or [None])[0]
@@ -780,6 +832,7 @@ class Validator:
             class_assign_de = self._cell(row, headers.get('Klassen-Zuordnung (DE)', 12))
             class_assign_fr = self._cell(row, headers.get('Affectation de classe (FR)', 13))
             class_assign_it = self._cell(row, headers.get('Assegnazione della classe (IT)', 14))
+            category = self._cell(row, headers.get('Category/Kategorie/Catégorie/Categoria', 6))
             label_en = self._cell(row, headers.get('Designation (EN)', 15))
             label_de = self._cell(row, headers.get('Bezeichnung (DE)', 16))
             label_fr = self._cell(row, headers.get('Désignation (FR)', 17))
@@ -796,6 +849,7 @@ class Validator:
             status = self._cell(row, headers.get('Status', 31 if self.has_public_dictionary() else 30))
             version_date = self._cell(row, headers.get('Version date', 32 if self.has_public_dictionary() else 31))
             source = self._cell(row, headers.get('Provenance (PROV)', 33 if self.has_public_dictionary() else 32))
+            is_non_ifc_taxonomy_class = self._is_non_ifc_taxonomy_class(category, source)
             related_document = self._cell(row, headers.get('RelatedDocumentName (EN)', 35 if self.has_public_dictionary() else 34))
             # v1.0.0+: RelatedDocumentItemReference column
             related_document_item = self._cell(row, headers.get('RelatedDocumentItemReference', 36 if self.has_public_dictionary() else 35))
@@ -857,18 +911,18 @@ class Validator:
                     elif expected_value and actual_value != expected_value:
                         self.add('warning', 'system_generated_class_assignment_override', f'{column_label} is inconsistent with the resolved authoritative class assignment concept. Manual value {actual_value} will be overwritten by {expected_value}.', sheet=sheet_name, row=idx)
                         self.add_normalization(sheet_name, idx, column_label, actual_value, expected_value, 'Manual multilingual class assignment overridden by authoritative Rules concept', 'derived-class-assignment-translation', True)
-            if not ifc_uri:
+            if not ifc_uri and not is_non_ifc_taxonomy_class:
                 self.add('error', 'missing_ifc_uri', 'Classes row missing IFC_URI', sheet=sheet_name, row=idx)
-            else:
+            elif ifc_uri:
                 if not self.is_absolute_uri(ifc_uri):
                     self.add('error', 'invalid_ifc_uri', f'Invalid IFC_URI: {ifc_uri}', sheet=sheet_name, row=idx)
                 elif not self.is_valid_bsdd_identifier_uri(ifc_uri):
                     self.add('error', 'invalid_ifc_uri_namespace', f'IFC_URI is not in a valid buildingSMART/bSDD identifier namespace: {ifc_uri}', sheet=sheet_name, row=idx)
                 elif ifc_uri_set and ifc_uri not in ifc_uri_set:
                     self.add('error', 'unknown_ifc_uri', f'IFC_URI not found in authoritative bSDD harvest: {ifc_uri}', sheet=sheet_name, row=idx)
-            if not ifc_obj:
+            if not ifc_obj and not is_non_ifc_taxonomy_class:
                 self.add('error', 'missing_ifc_object_entity', 'Classes row missing IfcObject Entity', sheet=sheet_name, row=idx)
-            if not ifc_type:
+            if not ifc_type and not is_non_ifc_taxonomy_class:
                 self.add('warning', 'missing_ifc_type_object_entity', 'IfcTypeObject Entity is missing; this may be acceptable if mapping exists only on object level', sheet=sheet_name, row=idx)
             self.validate_predefined_type(ifc_obj, predefined, ifc_uri, sheet_name, idx)
             if not source:
@@ -1240,10 +1294,12 @@ class Validator:
                     group_label_map[norm] = val
         # Build a mapping of normalized row-2 headers -> column index
         row2_headers = {self._norm(ws.cell(2, c).value): c for c in range(1, ws.max_column + 1) if self._norm(ws.cell(2, c).value)}
+        data_template_id_col = row2_headers.get(self._norm('DataTemplate-ID'))
         property_anchor = row2_headers.get(self._norm('Property - Designation/Bezeichnung/Désignation/Designazione')) or 5
         # New v1.0.0 structure: detect related-document anchors dynamically in row 2
         related_doc_anchor = row2_headers.get(self._norm('RelatedDocumentName (EN)'))
         related_doc_item_anchor = row2_headers.get(self._norm('RelatedDocumentItemReference'))
+        document_block_anchor = row2_headers.get(self._norm('Document - Designation/Bezeichnung/Désignation/Designazione'))
         governance_anchor = row2_headers.get(self._norm('Governance'))
         loin_anchor = row2_headers.get(self._norm('LOIN'))
         property_start_col = property_anchor + 1
@@ -1251,6 +1307,8 @@ class Validator:
         candidates = []
         if related_doc_anchor and related_doc_anchor > property_start_col:
             candidates.append(related_doc_anchor - 1)
+        if document_block_anchor and document_block_anchor > property_start_col:
+            candidates.append(document_block_anchor - 1)
         if loin_anchor and loin_anchor > property_start_col:
             candidates.append(loin_anchor - 1)
         if governance_anchor and governance_anchor > property_start_col:
@@ -1319,11 +1377,14 @@ class Validator:
         governance_version_date_col = (governance_anchor + 2) if governance_anchor else None
         governance_prov_col = (governance_anchor + 3) if governance_anchor else None
         dropdown_status = self._load_dropdown_values('Status')
+        template_records = {}
+        seen_requirement_keys = set()
         for ridx in range(5, ws.max_row + 1):
             row_values = [ws.cell(ridx, c).value for c in range(1, ws.max_column + 1)]
             if not self._row_has_meaningful_content(row_values):
                 continue
             object_label = self._cell([ws.cell(ridx, 1).value], 1)
+            data_template_id = self._cell([ws.cell(ridx, data_template_id_col).value], 1) if data_template_id_col else None
             property_group_label = self._cell([ws.cell(ridx, 3).value], 1)
             if object_label and self._norm(object_label) not in object_label_map and object_label not in class_codes:
                 self.add('error', 'matrix_unknown_object_label', f'Data_Template class reference not found in Classes labels (DE/EN/FR/IT): {object_label}', sheet=matrix_sheet, row=ridx)
@@ -1335,6 +1396,22 @@ class Validator:
                 if cell is None or str(cell).strip() == '':
                     continue
                 has_property_assignment = True
+                if data_template_id:
+                    requirement_key = (
+                        self._norm(data_template_id),
+                        self._norm(property_group_label) or 'ungrouped',
+                        self._norm(prop_code),
+                    )
+                    if requirement_key in seen_requirement_keys:
+                        self.add(
+                            'error',
+                            'matrix_duplicate_property_requirement',
+                            f'DataTemplate-ID {data_template_id} repeats Property {label} in the same GroupOfProperties context.',
+                            sheet=matrix_sheet,
+                            row=ridx,
+                        )
+                    else:
+                        seen_requirement_keys.add(requirement_key)
                 if str(cell).strip().lower() == 'x':
                     continue
                 overrides = self.parse_allowed_list(cell, sheet=matrix_sheet, row=ridx, column=f'col-{col_idx}')
@@ -1357,6 +1434,74 @@ class Validator:
                         self.add('error', 'matrix_invalid_version_date', f'Data_Template.Version date should be ISO 8601 date-time with timezone, got: {governance_version_date}', sheet=matrix_sheet, row=ridx)
                     if not governance_prov:
                         self.add('error', 'matrix_missing_provenance', 'Data_Template.Provenance (PROV) is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
+
+            has_template_content = bool(object_label or property_group_label or has_property_assignment)
+            if data_template_id_col and has_template_content:
+                if not data_template_id:
+                    suggested_id = f'{self.slugify(object_label)}-dt' if object_label else None
+                    self.add(
+                        'error',
+                        'matrix_missing_data_template_id',
+                        'DataTemplate-ID is required for every populated Data_Template row. Repeat the same ID across rows to attach 0..n GroupOfProperties.',
+                        sheet=matrix_sheet,
+                        row=ridx,
+                    )
+                    if suggested_id:
+                        self.add_normalization(
+                            matrix_sheet,
+                            ridx,
+                            'DataTemplate-ID',
+                            data_template_id,
+                            suggested_id,
+                            'Stable DataTemplate identity derived from the Class label',
+                            'derived-data-template-id',
+                            True,
+                        )
+                elif not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', data_template_id):
+                    self.add(
+                        'error',
+                        'matrix_invalid_data_template_id',
+                        'DataTemplate-ID must be a lowercase, hyphen-separated stable identifier.',
+                        sheet=matrix_sheet,
+                        row=ridx,
+                    )
+                else:
+                    governance_values = (
+                        self._cell([ws.cell(ridx, governance_status_col).value], 1) if governance_status_col else None,
+                        self._cell([ws.cell(ridx, governance_version_date_col).value], 1) if governance_version_date_col else None,
+                        self._cell([ws.cell(ridx, governance_prov_col).value], 1) if governance_prov_col else None,
+                    )
+                    loin_values = (
+                        self._cell([ws.cell(ridx, loin_anchor + 1).value], 1) if loin_anchor else None,
+                        self._cell([ws.cell(ridx, loin_anchor + 2).value], 1) if loin_anchor else None,
+                        self._cell([ws.cell(ridx, loin_anchor + 3).value], 1) if loin_anchor else None,
+                    )
+                    key = self._norm(data_template_id)
+                    previous = template_records.get(key)
+                    current = {
+                        'class': self._norm(object_label),
+                        'governance': tuple(self._norm(value) for value in governance_values),
+                        'loin': tuple(self._norm(value) for value in loin_values),
+                    }
+                    if previous:
+                        if previous['class'] != current['class']:
+                            self.add(
+                                'error',
+                                'matrix_data_template_class_mismatch',
+                                f'DataTemplate-ID {data_template_id} is reused for more than one Class.',
+                                sheet=matrix_sheet,
+                                row=ridx,
+                            )
+                        if previous['governance'] != current['governance']:
+                            self.add(
+                                'error',
+                                'matrix_data_template_governance_mismatch',
+                                f'Rows sharing DataTemplate-ID {data_template_id} must use identical Governance values.',
+                                sheet=matrix_sheet,
+                                row=ridx,
+                            )
+                    else:
+                        template_records[key] = current
 
             # v1.0.0+: Validate document relation columns for this Data_Template row
             if 'doc_relation_pairs' in locals() and doc_relation_pairs:
@@ -1482,15 +1627,19 @@ class Validator:
             raise ValueError('Data_Template sheet not found')
         ws = self.wb[sheet_name]
         row2_headers = {self._norm(ws.cell(2, c).value): c for c in range(1, ws.max_column + 1) if self._norm(ws.cell(2, c).value)}
+        data_template_id_col = row2_headers.get(self._norm('DataTemplate-ID'))
         property_anchor = row2_headers.get(self._norm('Property - Designation/Bezeichnung/Désignation/Designazione')) or 5
         related_doc_anchor = row2_headers.get(self._norm('RelatedDocumentName (EN)'))
         related_doc_item_anchor = row2_headers.get(self._norm('RelatedDocumentItemReference'))
+        document_block_anchor = row2_headers.get(self._norm('Document - Designation/Bezeichnung/Désignation/Designazione'))
         governance_anchor = row2_headers.get(self._norm('Governance'))
         loin_anchor = row2_headers.get(self._norm('LOIN'))
         property_start_col = property_anchor + 1
         candidates = []
         if related_doc_anchor and related_doc_anchor > property_start_col:
             candidates.append(related_doc_anchor - 1)
+        if document_block_anchor and document_block_anchor > property_start_col:
+            candidates.append(document_block_anchor - 1)
         if loin_anchor and loin_anchor > property_start_col:
             candidates.append(loin_anchor - 1)
         if governance_anchor and governance_anchor > property_start_col:
@@ -1518,6 +1667,7 @@ class Validator:
                 doc_relation_pairs.append((rel_col, item_col, rel_label, item_label))
 
         return {
+            'data_template_id_col': data_template_id_col,
             'property_anchor': property_anchor,
             'related_doc_anchor': related_doc_anchor,
             'related_doc_item_anchor': related_doc_item_anchor,

@@ -4,6 +4,14 @@
 
 Dieses Repository stellt Grundlagen zur Verfügung, um bestehende Datenkataloge aus Planung, Bau und Betrieb von Bauwerken in eine strukturierte Excel-Vorlage zu überführen und die Qualität zu verbessern.
 
+## Zusammenspiel der KBOB-Repositories
+
+- [`KBOB-data-dictionary`](https://github.com/KBOB-admin/KBOB-data-dictionary) pflegt Vorlagen und Validierungslogik.
+- [`KBOB-data-dictionary-schemaforge`](https://github.com/KBOB-admin/KBOB-data-dictionary-schemaforge) transformiert validierte Arbeitsmappen in RDF- und I14Y-Publikationsartefakte.
+- [`KBOB-data-dictionary-schema`](https://github.com/KBOB-admin/KBOB-data-dictionary-schema) ist die normative Quelle für das von SchemaForge verwendete NatDD-`dd:`-Kernvokabular.
+
+Die Vorlagen legen die fachliche Eingabestruktur fest. Der Validator prüft diese Struktur, definiert aber keine RDF-Begriffe. Die Bedeutung der publizierten `dd:`-Klassen und -Properties wird ausschliesslich im Schema-Repository gepflegt. Dessen Namespace ist während der öffentlichen `0.x`-Reviewphase noch provisorisch.
+
 Kurz gesagt ist der Ablauf so:
 
 1. die leere Vorlage herunterladen
@@ -58,13 +66,13 @@ Lesen Sie zuerst:
 
 Verwenden Sie dann je nach Zielgruppe die passende leere Vorlage:
 
-- `templates/Strukturvorlage_DataDictionary_empty_v0.9.5.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_v1.0.0.xlsx`
 - `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx`
 
 Wenn Sie ein Beispiel brauchen, schauen Sie hier:
 
-- `templates/test_files/Strukturvorlage_AreaMgmt_v0.5.0.xlsx`
-- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v1.0.0.xlsx`
+- `templates/test_files/Strukturvorlage_AreaMgmt_v0.6.0.xlsx`
+- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx`
 
 ## Struktur der Vorlagen
 
@@ -72,7 +80,7 @@ Es gibt vier kanonische `.xlsx`-Dateien, die fachlich und strukturell synchron g
 
 ### Leere Hauptvorlagen
 
-- `templates/Strukturvorlage_DataDictionary_empty_v0.9.5.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_v1.0.0.xlsx`
 - `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx`
 
 `*_empty.xlsx` ist die allgemeine Vorlage ohne öffentlichen Zusatzblock.
@@ -81,8 +89,8 @@ Es gibt vier kanonische `.xlsx`-Dateien, die fachlich und strukturell synchron g
 
 ### Ausgefüllte Beispielvorlagen
 
-- `templates/test_files/Strukturvorlage_AreaMgmt_v0.5.0.xlsx`
-- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v1.0.0.xlsx`
+- `templates/test_files/Strukturvorlage_AreaMgmt_v0.6.0.xlsx`
+- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx`
 
 Diese beiden Beispiel-Dateien müssen dieselbe fachliche Struktur, dieselben Blattnamen, dieselben Kernspalten und dieselbe Guidance widerspiegeln wie die leeren Hauptvorlagen. Die einzige zulässige strukturelle Abweichung bleibt der öffentliche Zusatzblock `Dictionary_public` in den beiden Public-Varianten.
 
@@ -90,10 +98,10 @@ Diese beiden Beispiel-Dateien müssen dieselbe fachliche Struktur, dieselben Bla
 
 Wenn Feedback an der Vorlage umgesetzt wird, muss es immer auf alle vier kanonischen `.xlsx`-Dateien angewendet werden:
 
-- `templates/Strukturvorlage_DataDictionary_empty_v0.9.5.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_v1.0.0.xlsx`
 - `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx`
-- `templates/test_files/Strukturvorlage_AreaMgmt_v0.5.0.xlsx`
-- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v1.0.0.xlsx`
+- `templates/test_files/Strukturvorlage_AreaMgmt_v0.6.0.xlsx`
+- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx`
 
 Dabei gilt:
 
