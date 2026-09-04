@@ -136,10 +136,42 @@ Der Validator verwendet für externe Referenzprüfungen ausschliesslich Artefakt
 
 - `resources/qudt/units.ttl` für `Properties.QUDT URI`
 - `resources/bsdd/ifc4.3-uri-cache.json` für IFC-/bSDD-Identifier
+- `resources/ifc/ifc4x3-add2-object-type-pairs.json` für schema-konforme Paare aus IFC-Objekt- und TypeObject-Entitäten
 
 Damit darf die GitHub-Validierung nicht von lokalen Dateien unter `/home/...` oder anderen persönlichen Arbeitsverzeichnissen abhängen.
 
 Lernpunkt aus `unknown_qudt_unit_uri` für `http://qudt.org/vocab/unit/M2`: Die URI ist gültig und im QUDT-Referenzartefakt vorhanden. Der Fehler entstand, weil die frühere Validator-Konfiguration auf eine lokale QUDT-Datei ausserhalb des Repositories zeigte. In einer reproduzierbaren GitHub-Umgebung war diese Datei nicht garantiert vorhanden; dadurch wurde die lokale Referenzmenge leer oder abweichend aufgebaut und `M2` konnte fälschlich als unbekannt erscheinen.
+
+### IFC-Mapping in `Classes`
+
+Die vier IFC-Felder beschreiben unterschiedliche Aspekte des Mappings:
+
+- `IFC_URI` verweist auf den bSDD-Identifier der gemappten IFC-Klasse, gegebenenfalls einschliesslich PredefinedType, zum Beispiel `.../class/IfcTankVESSEL`.
+- `IfcObject Entity` enthält die IFC-Entität der Objektebene, zum Beispiel `IfcTank`.
+- `IfcTypeObject Entity` ist optional und dokumentiert, ob das Mapping zusätzlich für die zugehörige IFC-Typebene gilt.
+- `PredefinedType` enthält, falls verwendet, den kontrollierten IFC-Enumerationswert, zum Beispiel `VESSEL`.
+
+Für `IfcTypeObject Entity` gilt ausdrücklich:
+
+- **Leer = nur Objektebene.** Ein leerer Wert ist gültig und erzeugt keine Warnung.
+- **Ausgefüllt = Mapping gilt auch für die angegebene Typebene.** Dann muss die Typentität zum `IfcObject Entity` passen. Für `IfcTank` ist ausschliesslich `IfcTankType` zulässig.
+
+Der PredefinedType ist eine separate Aussage und wird unabhängig von der optionalen TypeObject-Spalte geprüft. Beispiel eines spezialisierten Mappings:
+
+```text
+IFC_URI:              https://identifier.buildingsmart.org/uri/buildingsmart/ifc/4.3/class/IfcTankVESSEL
+IfcObject Entity:     IfcTank
+IfcTypeObject Entity: IfcTankType
+PredefinedType:       VESSEL
+```
+
+`IfcTankVESSEL` ist hierbei ein bSDD-Identifier für die Kombination aus Objektentität und PredefinedType. Es ist keine IFC-TypeObject-Entität und darf deshalb nicht in `IfcTypeObject Entity` eingetragen werden. Ebenso ist `IfcTankVessel` keine gültige IFC-Entität.
+
+Die Prüfungen bleiben bewusst getrennt:
+
+1. `IfcObject Entity` und `IfcTypeObject Entity` müssen ein schema-konformes Paar bilden, sofern die optionale TypeObject-Spalte befüllt ist.
+2. `PredefinedType` muss ein für die Objektentität zulässiger IFC-Wert sein.
+3. `IFC_URI` muss mit der Kombination aus `IfcObject Entity` und `PredefinedType` übereinstimmen, wenn ein PredefinedType angegeben ist.
 
 ## H. Ergebnisse
 
