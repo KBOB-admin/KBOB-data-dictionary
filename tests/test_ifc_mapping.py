@@ -41,6 +41,33 @@ class IfcMappingTests(unittest.TestCase):
         self.validator.validate_predefined_type('IfcTank', 'NOTAREALTYPE', uri, 'Classes', 7)
         self.assertIn('invalid_predefined_type', self.finding_codes())
 
+    def test_single_ifc_set_reference_is_accepted(self):
+        references = self.validator.parse_ifc_linked_references('Pset_PipeSegmentTypeCommon', 'Properties', 60)
+        self.assertEqual(['Pset_PipeSegmentTypeCommon'], references)
+        self.assertEqual(set(), self.finding_codes())
+
+    def test_multiple_ifc_set_references_require_json_array(self):
+        references = self.validator.parse_ifc_linked_references('Pset_PipeSegmentTypeCommon\nQto_WallBaseQuantities', 'Properties', 60)
+        self.assertEqual([], references)
+        self.assertIn('invalid_ifc_linked_list_syntax', self.finding_codes())
+
+    def test_json_ifc_set_reference_list_is_accepted(self):
+        raw = '["Pset_PipeSegmentTypeCommon", "Qto_WallBaseQuantities"]'
+        references = self.validator.parse_ifc_linked_references(raw, 'Properties', 60)
+        self.assertEqual(['Pset_PipeSegmentTypeCommon', 'Qto_WallBaseQuantities'], references)
+        self.assertEqual(set(), self.finding_codes())
+
+    def test_ifc_set_reference_list_requires_non_empty_strings(self):
+        references = self.validator.parse_ifc_linked_references('["Pset_WallCommon", ""]', 'Properties', 60)
+        self.assertEqual([], references)
+        self.assertIn('invalid_ifc_linked_list_syntax', self.finding_codes())
+
+    def test_duplicate_ifc_set_reference_is_rejected(self):
+        raw = '["Qto_WallBaseQuantities", "Qto_WallBaseQuantities"]'
+        references = self.validator.parse_ifc_linked_references(raw, 'Properties', 60)
+        self.assertEqual(['Qto_WallBaseQuantities', 'Qto_WallBaseQuantities'], references)
+        self.assertIn('duplicate_ifc_linked_reference', self.finding_codes())
+
 
 if __name__ == '__main__':
     unittest.main()

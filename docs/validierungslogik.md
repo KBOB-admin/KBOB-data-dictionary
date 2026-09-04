@@ -173,6 +173,17 @@ Die Prüfungen bleiben bewusst getrennt:
 2. `PredefinedType` muss ein für die Objektentität zulässiger IFC-Wert sein.
 3. `IFC_URI` muss mit der Kombination aus `IfcObject Entity` und `PredefinedType` übereinstimmen, wenn ein PredefinedType angegeben ist.
 
+### Mehrere IFC-Pset-/Qto-Referenzen in `Properties`
+
+Die Spalte `IfcPropertySet (Pset) / IfcQuantitySet (Qto)` akzeptiert genau zwei Eingabeformen:
+
+- **Einzelwert:** ein einzelner Set-Name oder eine einzelne zulässige absolute IRI, zum Beispiel `Pset_PipeSegmentTypeCommon`.
+- **Mehrfachwert:** eine syntaktisch gültige JSON-Liste aus nicht leeren Strings, zum Beispiel `["Pset_PipeSegmentTypeCommon", "Qto_PipeSegmentBaseQuantities"]`.
+
+Zeilenumbruch-, Semikolon- oder einfache Kommalisten sind nicht zulässig. JSON-Listen verwenden doppelte Anführungszeichen. Jeder Listeneintrag wird einzeln nach denselben Regeln wie ein Einzelwert validiert. Leere Einträge, Nicht-String-Werte und Duplikate sind Fehler.
+
+Diese Konvention entspricht der JSON-Listensyntax in `Values.Enumeration (EN)` und bei Mehrfachwerten in `Data_Template`. Benutzer müssen damit nur zwischen einem Einzelwert und einer JSON-Liste unterscheiden.
+
 ## H. Ergebnisse
 
 Der Validator liefert drei Arten von Resultaten:

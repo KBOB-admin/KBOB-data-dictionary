@@ -586,6 +586,28 @@ class Validator:
             return False
         return isinstance(parsed, list)
 
+    def parse_ifc_linked_references(self, raw: str | None, sheet: str, row: int) -> list[str]:
+        if not raw:
+            return []
+        text = str(raw).strip()
+        if text.startswith('['):
+            try:
+                parsed = json.loads(text)
+            except Exception:
+                parsed = None
+            if not isinstance(parsed, list) or not all(isinstance(item, str) and item.strip() for item in parsed):
+                self.add('error', 'invalid_ifc_linked_list_syntax', 'Multiple IfcPropertySet / IfcQuantitySet references must use a JSON array of non-empty strings, for example ["Pset_WallCommon", "Qto_WallBaseQuantities"].', sheet=sheet, row=row)
+                return []
+            references = [item.strip() for item in parsed]
+            duplicates = sorted({item for item in references if references.count(item) > 1})
+            if duplicates:
+                self.add('error', 'duplicate_ifc_linked_reference', f'IfcPropertySet / IfcQuantitySet JSON array contains duplicate references: {duplicates}', sheet=sheet, row=row)
+            return references
+        if any(separator in text for separator in ('\n', '\r', ';')):
+            self.add('error', 'invalid_ifc_linked_list_syntax', 'Multiple IfcPropertySet / IfcQuantitySet references must use JSON array syntax; newline- and semicolon-separated lists are not allowed.', sheet=sheet, row=row)
+            return []
+        return [text]
+
     def _require_en_plus_one_local(self, row, idx: int, sheet_name: str, en_idx: int, local_idx_map: dict[str, int], label: str):
         en_value = self._cell(row, en_idx)
         local_values = {lang: self._cell(row, col_idx) for lang, col_idx in local_idx_map.items()}
@@ -1103,11 +1125,12 @@ class Validator:
             if ifc_pset:
                 if not ifc_property_uri:
                     self.add('warning', 'ifc_set_without_ifc_uri', f'IfcPropertySet / IfcQuantitySet is filled but Properties.IFC_URI is empty. The set reference is only validated when IFC_URI is also provided.', sheet=sheet_name, row=idx)
-                elif self.is_absolute_uri(ifc_pset):
-                    if not self.is_valid_bsdd_identifier_uri(ifc_pset):
-                        self.add('error', 'invalid_ifc_linked_uri_namespace', f'IfcPropertySet / IfcQuantitySet is not in a valid buildingSMART/bSDD identifier namespace: {ifc_pset}', sheet=sheet_name, row=idx)
-                elif not re.match(r'^(Pset|Qto)_[A-Za-z0-9_]+$', str(ifc_pset).strip()):
-                    self.add('error', 'invalid_ifc_linked_uri', f'IfcPropertySet / IfcQuantitySet must be either an absolute IRI or a valid IFC set name like Pset_* / Qto_*. Got: {ifc_pset}', sheet=sheet_name, row=idx)
+                for linked_reference in self.parse_ifc_linked_references(ifc_pset, sheet_name, idx):
+                    if self.is_absolute_uri(linked_reference):
+                        if not self.is_valid_bsdd_identifier_uri(linked_reference):
+                            self.add('error', 'invalid_ifc_linked_uri_namespace', f'IfcPropertySet / IfcQuantitySet is not in a valid buildingSMART/bSDD identifier namespace: {linked_reference}', sheet=sheet_name, row=idx)
+                    elif not re.match(r'^(Pset|Qto)_[A-Za-z0-9_]+$', linked_reference):
+                        self.add('error', 'invalid_ifc_linked_uri', f'Each IfcPropertySet / IfcQuantitySet reference must be either an absolute IRI or a valid IFC set name like Pset_* / Qto_*. Got: {linked_reference}', sheet=sheet_name, row=idx)
             if status and status not in ALLOWED_LIFECYCLE:
                 self.add('error', 'invalid_property_status', f'Properties.Status must be one of the allowed lifecycle values, got: {status}', sheet=sheet_name, row=idx)
             if version_date and not ISO_DT_RE.match(version_date):
@@ -1765,6 +1788,18 @@ def _layman_mapping(code: str) -> dict:
             'what_it_means': 'Die eingetragenen IFC-Objekt- und Typentitäten bilden kein schema-konformes Paar.',
             'what_to_do': 'Verwenden Sie die im technischen Detail genannte Typentität oder lassen Sie das optionale TypeObject-Feld bei einem reinen Objekt-Mapping leer.',
             'category': 'Object definitions',
+        },
+        'invalid_ifc_linked_list_syntax': {
+            'title': 'Invalid IFC set list format',
+            'what_it_means': 'Mehrere IFC-Pset-/Qto-Referenzen wurden nicht als gültige JSON-Liste erfasst.',
+            'what_to_do': 'Verwenden Sie für einen Wert einen einzelnen Pset_*/Qto_*-Namen und für mehrere Werte eine JSON-Liste wie ["Pset_WallCommon", "Qto_WallBaseQuantities"].',
+            'category': 'Property definitions',
+        },
+        'duplicate_ifc_linked_reference': {
+            'title': 'Duplicate IFC set reference',
+            'what_it_means': 'Dieselbe IFC-Pset-/Qto-Referenz kommt in der JSON-Liste mehrfach vor.',
+            'what_to_do': 'Entfernen Sie die doppelten Listeneinträge.',
+            'category': 'Property definitions',
         },
     }
     return mapping.get(code, {
