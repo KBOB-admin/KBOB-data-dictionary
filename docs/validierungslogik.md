@@ -154,7 +154,7 @@ Die vier IFC-Felder beschreiben unterschiedliche Aspekte des Mappings:
 Für `IfcTypeObject Entity` gilt ausdrücklich:
 
 - **Leer = nur Objektebene.** Ein leerer Wert ist gültig und erzeugt keine Warnung.
-- **Ausgefüllt = Mapping gilt auch für die angegebene Typebene.** Dann muss die Typentität zum `IfcObject Entity` passen. Für `IfcTank` ist ausschliesslich `IfcTankType` zulässig.
+- **Ausgefüllt = Mapping gilt auch für die angegebene Typebene.** Dann muss die Typentität zum `IfcObject Entity` passen. Für **Beispiel:** `IfcTank` ist ausschliesslich `IfcTankType` zulässig.
 
 Der PredefinedType ist eine separate Aussage und wird unabhängig von der optionalen TypeObject-Spalte geprüft. Beispiel eines spezialisierten Mappings:
 
