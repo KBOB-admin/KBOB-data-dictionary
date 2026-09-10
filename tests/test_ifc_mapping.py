@@ -1,12 +1,15 @@
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+
+import openpyxl
 
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts' / 'validator'))
 
-from validate_strukturvorlage import Validator  # noqa: E402
+from validate_strukturvorlage import USER_DEFINED_IFC_URI, Validator  # noqa: E402
 
 
 class IfcMappingTests(unittest.TestCase):
@@ -25,6 +28,8 @@ class IfcMappingTests(unittest.TestCase):
         finding_codes = {finding['code'] for finding in report['findings']}
         self.assertNotIn('invalid_ifc_type_object_entity', finding_codes)
         self.assertNotIn('invalid_ifc_object_type_pair', finding_codes)
+        self.assertNotIn('missing_ifc_object_entity', finding_codes)
+        self.assertNotIn('minimum_documents', finding_codes)
 
     def test_v06_predefined_types_are_covered_by_ifc_uri_cache(self):
         validator = Validator(self.USE_CASE_SOURCE)
@@ -32,6 +37,24 @@ class IfcMappingTests(unittest.TestCase):
         finding_codes = {finding['code'] for finding in report['findings']}
         self.assertNotIn('unknown_ifc_uri', finding_codes)
         self.assertNotIn('invalid_predefined_type', finding_codes)
+
+    def test_user_defined_is_an_accepted_ifc_uri_value(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workbook = openpyxl.load_workbook(self.USE_CASE_SOURCE)
+            ws = workbook['Classes']
+            headers = self.validator._sheet_headers('Classes')
+            ifc_uri_column = headers['IFC_URI']
+            for row_idx in range(self.validator._sheet_start_row('Classes'), ws.max_row + 1):
+                if ws.cell(row_idx, ifc_uri_column).value in (None, ''):
+                    ws.cell(row_idx, ifc_uri_column).value = USER_DEFINED_IFC_URI
+            test_path = Path(temp_dir) / 'user-defined-ifc-uri.xlsx'
+            workbook.save(test_path)
+
+            report = Validator(test_path).validate()
+            finding_codes = {finding['code'] for finding in report['findings']}
+            self.assertNotIn('missing_ifc_uri', finding_codes)
+            self.assertNotIn('invalid_ifc_uri', finding_codes)
+            self.assertNotIn('invalid_ifc_uri_namespace', finding_codes)
 
     def test_predefined_type_is_validated_separately_from_type_entity(self):
         uri = 'https://identifier.buildingsmart.org/uri/buildingsmart/ifc/4.3/class/IfcTankVESSEL'

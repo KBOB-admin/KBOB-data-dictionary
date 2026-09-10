@@ -23,6 +23,7 @@ QUDT_UNITS_TTL = RESOURCE_DIR / 'qudt' / 'units.ttl'
 VALID_BSDD_URI_PREFIXES = (
     'https://identifier.buildingsmart.org/uri/buildingsmart/ifc/',
 )
+USER_DEFINED_IFC_URI = 'user-defined'
 CORE_REQUIRED_SHEETS = [
     'Header',
     'Classes',
@@ -933,17 +934,16 @@ class Validator:
                         self.add('warning', 'system_generated_class_assignment_override', f'{column_label} is inconsistent with the resolved authoritative class assignment concept. Manual value {actual_value} will be overwritten by {expected_value}.', sheet=sheet_name, row=idx)
                         self.add_normalization(sheet_name, idx, column_label, actual_value, expected_value, 'Manual multilingual class assignment overridden by authoritative Rules concept', 'derived-class-assignment-translation', True)
             if not ifc_uri and not is_non_ifc_taxonomy_class:
-                self.add('error', 'missing_ifc_uri', 'Classes row missing IFC_URI', sheet=sheet_name, row=idx)
-            elif ifc_uri:
+                self.add('error', 'missing_ifc_uri', 'Classes row missing IFC_URI. Enter an official IFC URI or user-defined.', sheet=sheet_name, row=idx)
+            elif ifc_uri and ifc_uri != USER_DEFINED_IFC_URI:
                 if not self.is_absolute_uri(ifc_uri):
                     self.add('error', 'invalid_ifc_uri', f'Invalid IFC_URI: {ifc_uri}', sheet=sheet_name, row=idx)
                 elif not self.is_valid_bsdd_identifier_uri(ifc_uri):
                     self.add('error', 'invalid_ifc_uri_namespace', f'IFC_URI is not in a valid buildingSMART/bSDD identifier namespace: {ifc_uri}', sheet=sheet_name, row=idx)
                 elif ifc_uri_set and ifc_uri not in ifc_uri_set:
                     self.add('error', 'unknown_ifc_uri', f'IFC_URI not found in authoritative bSDD harvest: {ifc_uri}', sheet=sheet_name, row=idx)
-            if not ifc_obj and not is_non_ifc_taxonomy_class:
-                self.add('error', 'missing_ifc_object_entity', 'Classes row missing IfcObject Entity', sheet=sheet_name, row=idx)
-            self.validate_predefined_type(ifc_obj, predefined, ifc_uri, sheet_name, idx)
+            if ifc_uri != USER_DEFINED_IFC_URI:
+                self.validate_predefined_type(ifc_obj, predefined, ifc_uri, sheet_name, idx)
             if not source:
                 self.add('error', 'missing_prov_source', 'Classes.Provenance (PROV) is required.', sheet=sheet_name, row=idx)
             # v1.0.0+: Validate RelatedDocument references with proper item reference checking
@@ -1574,11 +1574,8 @@ class Validator:
         if len(dd.properties) < 1 and len(dd.classes) > 0:
             self.add('error', 'minimum_properties', 'At least one valid property row is required when classes are defined')
         require_assignments = len(dd.classes) > 0 and len(dd.properties) > 0
-        require_documents = len(dd.classes) > 0 and (len(dd.properties) > 0 or len(dd.class_properties) > 0)
         if require_assignments and len(dd.class_properties) < 1:
             self.add('error', 'minimum_assignments', 'At least one valid class-property assignment is required when both classes and properties are defined')
-        if require_documents and len(getattr(dd, 'documents', [])) < 1:
-            self.add('error', 'minimum_documents', 'At least one document row is required when class/property content is being defined for source-governed output')
 
     def allowed_values_for_property(self, prop_code: str) -> list[str]:
         dd = self.get_dd()
@@ -1705,8 +1702,8 @@ def _layman_mapping(code: str) -> dict:
         },
         'missing_ifc_uri': {
             'title': 'Missing IFC reference',
-            'what_it_means': 'Diesem Objekt fehlt die offizielle IFC URI reference.',
-            'what_to_do': 'Fügen Sie die korrekte offizielle IFC URI für dieses Objekt hinzu.',
+            'what_it_means': 'Für diese Klasse wurde weder eine offizielle IFC-URI noch die Kennzeichnung user-defined eingetragen.',
+            'what_to_do': 'Tragen Sie die passende buildingSMART-IFC-URI ein. Wenn keine passende IFC-Klasse existiert, tragen Sie exakt user-defined ein.',
             'category': 'Object definitions',
         },
         'missing_class_definition': {

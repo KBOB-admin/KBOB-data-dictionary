@@ -110,6 +110,8 @@ Beispiele:
 - Referenzen auf Wertelisten müssen auf vorhandene `Values` zeigen,
 - Dokumentreferenzen müssen – wo vorgesehen – auf vorhandene `Documents` verweisen.
 
+Das Sheet `Documents` darf vorläufig leer bleiben. Allein das Vorhandensein von Klassen, Merkmalen oder Zuordnungen löst keine Mindestanzahl-Prüfung für Dokumente aus. Sobald Dokumentzeilen erfasst werden, gelten deren Feld- und Referenzprüfungen weiterhin.
+
 Wenn eine Referenz nicht aufgelöst werden kann, entsteht ein Fehler.
 
 ## F. Formale Prüfungen
@@ -119,7 +121,8 @@ Bestimmte Felder werden zusätzlich formal geprüft.
 Dazu gehören zum Beispiel:
 
 - URI-Formatprüfungen,
-- `Classes.IFC_URI` und IFC-Entity-Felder werden für echte IFC-ausgerichtete Klassen geprüft; lokale Dokumenttyp-Taxonomieklassen, die als `Document type taxonomy` markiert sind, dürfen diese Felder leer lassen, weil sie keine exakten IFC-Objekt-/TypeObject-Entsprechungen darstellen,
+- `Classes.IFC_URI` akzeptiert entweder eine offizielle buildingSMART-IFC-URI oder den exakten Wert `user-defined`, wenn keine passende IFC-Klasse existiert,
+- `Classes.IfcObject Entity` ist optional; ein leerer Wert erzeugt keinen Fehler. Wenn ein Wert eingetragen wird, wird dessen IFC-Entitätsformat weiterhin geprüft,
 - `Header.DictionaryUri` verwendet vor einer Publikationsfreigabe eine neutrale, aus `OrganizationCode` und `DictionaryCode` abgeleitete `https://example.com/...`-URI,
 - eine LINDAS-URI wird niemals allein aus Workbook-Metadaten zugeteilt; sie wird erst nach einer expliziten Publikationsentscheidung eingetragen,
 - eine freigegebene LINDAS-URI muss die konkrete SemVer-Version am Ende enthalten und mit `Header.DictionaryVersion` übereinstimmen,
@@ -146,8 +149,8 @@ Lernpunkt aus `unknown_qudt_unit_uri` für `http://qudt.org/vocab/unit/M2`: Die 
 
 Die vier IFC-Felder beschreiben unterschiedliche Aspekte des Mappings:
 
-- `IFC_URI` verweist auf den bSDD-Identifier der gemappten IFC-Klasse, gegebenenfalls einschliesslich PredefinedType, zum Beispiel `.../class/IfcTankVESSEL`.
-- `IfcObject Entity` enthält die IFC-Entität der Objektebene, zum Beispiel `IfcTank`.
+- `IFC_URI` verweist auf den bSDD-Identifier der gemappten IFC-Klasse, gegebenenfalls einschliesslich PredefinedType, zum Beispiel `.../class/IfcTankVESSEL`. Existiert keine passende IFC-Klasse, ist stattdessen der exakte Wert `user-defined` zulässig.
+- `IfcObject Entity` ist optional und kann die IFC-Entität der Objektebene enthalten, zum Beispiel `IfcTank`. Ein leerer Wert ist gültig.
 - `IfcTypeObject Entity` ist optional und kann dokumentieren, ob das Mapping zusätzlich für eine IFC-Typebene gilt. Der Validator wertet diese Spalte nicht aus.
 - `PredefinedType` enthält, falls verwendet, den kontrollierten IFC-Enumerationswert, zum Beispiel `VESSEL`.
 
