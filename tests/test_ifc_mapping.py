@@ -11,7 +11,7 @@ from validate_strukturvorlage import Validator  # noqa: E402
 
 class IfcMappingTests(unittest.TestCase):
     SOURCE = ROOT / 'templates' / 'Strukturvorlage_DataDictionary_empty_v1.0.0.xlsx'
-    USE_CASE_SOURCE = ROOT / 'templates' / 'test_files' / 'Use Case Grundlagen Ausschreibung H-K_v0.5.xlsx'
+    USE_CASE_SOURCE = ROOT / 'templates' / 'test_files' / 'Use Case Grundlagen Ausschreibung H-K_v0.6.xlsx'
 
     def setUp(self):
         self.validator = Validator(self.SOURCE)
@@ -25,6 +25,13 @@ class IfcMappingTests(unittest.TestCase):
         finding_codes = {finding['code'] for finding in report['findings']}
         self.assertNotIn('invalid_ifc_type_object_entity', finding_codes)
         self.assertNotIn('invalid_ifc_object_type_pair', finding_codes)
+
+    def test_v06_predefined_types_are_covered_by_ifc_uri_cache(self):
+        validator = Validator(self.USE_CASE_SOURCE)
+        report = validator.validate()
+        finding_codes = {finding['code'] for finding in report['findings']}
+        self.assertNotIn('unknown_ifc_uri', finding_codes)
+        self.assertNotIn('invalid_predefined_type', finding_codes)
 
     def test_predefined_type_is_validated_separately_from_type_entity(self):
         uri = 'https://identifier.buildingsmart.org/uri/buildingsmart/ifc/4.3/class/IfcTankVESSEL'
