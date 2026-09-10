@@ -148,14 +148,10 @@ Die vier IFC-Felder beschreiben unterschiedliche Aspekte des Mappings:
 
 - `IFC_URI` verweist auf den bSDD-Identifier der gemappten IFC-Klasse, gegebenenfalls einschliesslich PredefinedType, zum Beispiel `.../class/IfcTankVESSEL`.
 - `IfcObject Entity` enthält die IFC-Entität der Objektebene, zum Beispiel `IfcTank`.
-- `IfcTypeObject Entity` ist optional und dokumentiert, ob das Mapping zusätzlich für die zugehörige IFC-Typebene gilt.
+- `IfcTypeObject Entity` ist optional und kann dokumentieren, ob das Mapping zusätzlich für eine IFC-Typebene gilt. Der Validator wertet diese Spalte nicht aus.
 - `PredefinedType` enthält, falls verwendet, den kontrollierten IFC-Enumerationswert, zum Beispiel `VESSEL`.
 
-Für `IfcTypeObject Entity` gilt ausdrücklich:
-
-- **Leer = nur Objektebene.** Ein leerer Wert ist gültig und erzeugt keine Warnung.
-- **Ausgefüllt = Mapping gilt auch für die angegebene Typebene.** Dann muss die Typentität zum `IfcObject Entity` passen.
-- **Beispiel:** Für `IfcTank` ist ausschliesslich `IfcTankType` zulässig.
+Für `IfcTypeObject Entity` gilt ausdrücklich: Leere und ausgefüllte Werte werden ohne Validierung akzeptiert. Insbesondere prüft der Validator weder, ob der Wert eine IFC-Entität ist, noch ob er zum `IfcObject Entity` passt.
 
 Der PredefinedType ist eine separate Aussage und wird unabhängig von der optionalen TypeObject-Spalte geprüft. Beispiel eines spezialisierten Mappings:
 
@@ -166,13 +162,12 @@ IfcTypeObject Entity: IfcTankType
 PredefinedType:       VESSEL
 ```
 
-`IfcTankVESSEL` ist hierbei ein bSDD-Identifier für die Kombination aus Objektentität und PredefinedType. Es ist keine IFC-TypeObject-Entität und darf deshalb nicht in `IfcTypeObject Entity` eingetragen werden. Ebenso ist `IfcTankVessel` keine gültige IFC-Entität.
+`IfcTankVESSEL` ist hierbei ein bSDD-Identifier für die Kombination aus Objektentität und PredefinedType. Die TypeObject-Spalte bleibt reine Dokumentation und wird vom Validator nicht geprüft.
 
-Die Prüfungen bleiben bewusst getrennt:
+Die verbleibenden IFC-Prüfungen sind:
 
-1. `IfcObject Entity` und `IfcTypeObject Entity` müssen ein schema-konformes Paar bilden, sofern die optionale TypeObject-Spalte befüllt ist.
-2. `PredefinedType` muss ein für die Objektentität zulässiger IFC-Wert sein.
-3. `IFC_URI` muss mit der Kombination aus `IfcObject Entity` und `PredefinedType` übereinstimmen, wenn ein PredefinedType angegeben ist.
+1. `PredefinedType` muss ein für die Objektentität zulässiger IFC-Wert sein.
+2. `IFC_URI` muss mit der Kombination aus `IfcObject Entity` und `PredefinedType` übereinstimmen, wenn ein PredefinedType angegeben ist.
 
 ### Mehrere IFC-Pset-/Qto-Referenzen in `Properties`
 

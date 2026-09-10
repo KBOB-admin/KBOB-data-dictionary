@@ -19,7 +19,6 @@ except ImportError:
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RESOURCE_DIR = REPO_ROOT / 'resources'
 BSDD_URI_CACHE = RESOURCE_DIR / 'bsdd' / 'ifc4.3-uri-cache.json'
-IFC_OBJECT_TYPE_PAIRS = RESOURCE_DIR / 'ifc' / 'ifc4x3-add2-object-type-pairs.json'
 QUDT_UNITS_TTL = RESOURCE_DIR / 'qudt' / 'units.ttl'
 VALID_BSDD_URI_PREFIXES = (
     'https://identifier.buildingsmart.org/uri/buildingsmart/ifc/',
@@ -75,7 +74,6 @@ class Validator:
         self.wb = openpyxl.load_workbook(workbook_path, data_only=True)
         self.dd = None
         self.ifc_uri_set = None
-        self.ifc_object_type_pairs = None
         self.qudt_unit_labels = None
         self.dd_loaded = False
         self.ifc_uri_set_loaded = False
@@ -177,11 +175,6 @@ class Validator:
             self.ifc_uri_set_loaded = True
         return self.ifc_uri_set
 
-    def get_ifc_object_type_pairs(self) -> dict[str, str]:
-        if self.ifc_object_type_pairs is None:
-            self.ifc_object_type_pairs = self._load_ifc_object_type_pairs()
-        return self.ifc_object_type_pairs
-
     def get_qudt_unit_labels(self) -> dict[str, dict[str, set[str]]]:
         if self.qudt_unit_labels is None:
             self.qudt_unit_labels = self._load_qudt_unit_labels()
@@ -246,19 +239,6 @@ class Validator:
             return
         if ifc_uri and ifc_uri != candidate_uri:
             self.add('error', 'ifc_uri_predefined_mismatch', f'IFC URI {ifc_uri} does not match the authoritative IFC predefined-type URI implied by IfcObject Entity + PredefinedType: {candidate_uri}', sheet=sheet_name, row=row_idx)
-
-    def validate_ifc_object_type_pair(self, ifc_obj: str | None, ifc_type: str | None, sheet_name: str, row_idx: int):
-        if not ifc_type:
-            return
-        ifc_object_type_pairs = self.get_ifc_object_type_pairs()
-        if not ifc_object_type_pairs:
-            return
-        base_ifc_obj = self._extract_base_ifc_entity(ifc_obj)
-        expected_ifc_type = ifc_object_type_pairs.get(base_ifc_obj) if base_ifc_obj else None
-        if not expected_ifc_type:
-            self.add('error', 'invalid_ifc_type_object_entity', f'IfcTypeObject Entity is filled, but {ifc_obj or "the empty IfcObject Entity"} has no corresponding IFC 4.3 TypeObject entity.', sheet=sheet_name, row=row_idx)
-        elif ifc_type != expected_ifc_type:
-            self.add('error', 'invalid_ifc_object_type_pair', f'IfcTypeObject Entity must match IfcObject Entity. For {base_ifc_obj}, the schema-conformant type entity is {expected_ifc_type}. Got: {ifc_type}', sheet=sheet_name, row=row_idx)
 
     @staticmethod
     def _is_non_ifc_taxonomy_class(category: str | None, provenance: str | None) -> bool:
@@ -332,16 +312,6 @@ class Validator:
                 pass
         self.add('warning', 'bsdd_reference_missing', f'bSDD URI cache not found: {BSDD_URI_CACHE}')
         return set()
-
-    def _load_ifc_object_type_pairs(self) -> dict[str, str]:
-        if IFC_OBJECT_TYPE_PAIRS.exists():
-            try:
-                payload = json.loads(IFC_OBJECT_TYPE_PAIRS.read_text())
-                return dict(payload.get('object_type_pairs', {}))
-            except Exception:
-                pass
-        self.add('warning', 'ifc_entity_reference_missing', f'IFC object/type entity reference not found: {IFC_OBJECT_TYPE_PAIRS}')
-        return {}
 
     def _load_rules_multilingual_lookup(self, canonical_header: str, translations: list[tuple[str, str]]) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
         ws = self.wb['Rules'] if 'Rules' in self.wb.sheetnames else None
@@ -895,7 +865,6 @@ class Validator:
             desc_it = self._cell(row, headers.get('Descrizione (IT)', 22))
             ifc_uri = self._cell(row, headers.get('IFC_URI', 24))
             ifc_obj = self._cell(row, headers.get('IfcObject Entity', 25))
-            ifc_type = self._cell(row, headers.get('IfcTypeObject Entity', 26))
             predefined = self._cell(row, headers.get('PredefinedType', 27))
             object_type = self._cell(row, headers.get('ObjectType', 28))
             status = self._cell(row, headers.get('Status', 31 if self.has_public_dictionary() else 30))
@@ -975,7 +944,6 @@ class Validator:
             if not ifc_obj and not is_non_ifc_taxonomy_class:
                 self.add('error', 'missing_ifc_object_entity', 'Classes row missing IfcObject Entity', sheet=sheet_name, row=idx)
             self.validate_predefined_type(ifc_obj, predefined, ifc_uri, sheet_name, idx)
-            self.validate_ifc_object_type_pair(ifc_obj, ifc_type, sheet_name, idx)
             if not source:
                 self.add('error', 'missing_prov_source', 'Classes.Provenance (PROV) is required.', sheet=sheet_name, row=idx)
             # v1.0.0+: Validate RelatedDocument references with proper item reference checking
@@ -1776,18 +1744,6 @@ def _layman_mapping(code: str) -> dict:
             'what_it_means': 'Der gleiche document code kommt mehrfach vor.',
             'what_to_do': 'Stellen Sie sicher, dass jeder document code eindeutig ist.',
             'category': 'Document and source governance',
-        },
-        'invalid_ifc_type_object_entity': {
-            'title': 'Invalid IFC type-level mapping',
-            'what_it_means': 'Die optionale TypeObject-Zuordnung verweist nicht auf eine passende IFC-4.3-Typentität.',
-            'what_to_do': 'Lassen Sie das Feld leer, wenn nur die Objektebene abgebildet wird. Andernfalls tragen Sie die zum IfcObject gehörende Typentität ein.',
-            'category': 'Object definitions',
-        },
-        'invalid_ifc_object_type_pair': {
-            'title': 'IFC object/type mapping does not match',
-            'what_it_means': 'Die eingetragenen IFC-Objekt- und Typentitäten bilden kein schema-konformes Paar.',
-            'what_to_do': 'Verwenden Sie die im technischen Detail genannte Typentität oder lassen Sie das optionale TypeObject-Feld bei einem reinen Objekt-Mapping leer.',
-            'category': 'Object definitions',
         },
         'invalid_ifc_linked_list_syntax': {
             'title': 'Invalid IFC set list format',
