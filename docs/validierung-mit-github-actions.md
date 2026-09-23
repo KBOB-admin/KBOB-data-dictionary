@@ -4,7 +4,7 @@
 
 Die GitHub Action verwendet standardmässig:
 
-- `templates/test_files/Strukturvorlage_AreaMgmt_v0.5.0.xlsx`
+- `WIP data dictionaries/IFMA/Strukturvorlage_AreaMgmt_v0.6.0.xlsx`
 
 Dieser Standardpfad dient als öffentlicher Referenztest für eine ausgefüllte und pipeline-gültige Beispielarbeitsmappe.
 

@@ -8,7 +8,7 @@ Author: datadict
 Inspected templates:
 
 - `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx`
-- `templates/Strukturvorlage_DataDictionary_empty_v0.9.5.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_v1.0.0.xlsx`
 
 Inspected implementation:
 

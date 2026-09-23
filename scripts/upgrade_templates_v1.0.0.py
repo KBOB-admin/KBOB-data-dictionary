@@ -307,22 +307,24 @@ def main():
     else:
         print(f"Warning: {public_empty_template} not found")
     
-    # Process AreaMgmt template
-    test_files_dir = templates_dir / "test_files"
-    area_mgmt_template = test_files_dir / "Strukturvorlage_AreaMgmt_v0.5.0.xlsx"
+    # Process WIP organisation examples
+    repository_root = templates_dir.parent
+    ifma_wip_dir = repository_root / "WIP data dictionaries" / "IFMA"
+    kbob_wip_dir = repository_root / "WIP data dictionaries" / "KBOB"
+    area_mgmt_template = ifma_wip_dir / "Strukturvorlage_AreaMgmt_v0.5.0.xlsx"
     if area_mgmt_template.exists():
-        output_path = test_files_dir / "Strukturvorlage_AreaMgmt_v1.0.0.xlsx"
+        output_path = ifma_wip_dir / "Strukturvorlage_AreaMgmt_v1.0.0.xlsx"
         # Use the AreaMgmt v1.0.0 impressum as source for itself (already updated)
-        impressum_for_area = test_files_dir / "Strukturvorlage_AreaMgmt_v1.0.0.xlsx"
+        impressum_for_area = ifma_wip_dir / "Strukturvorlage_AreaMgmt_v1.0.0.xlsx"
         impressum_src = impressum_for_area if impressum_for_area.exists() else None
         upgrade_template(area_mgmt_template, output_path, impressum_src)
     else:
         print(f"Warning: {area_mgmt_template} not found")
     
     # Process KBOB template
-    kbob_template = test_files_dir / "Strukturvorlage_DataDictionary_KBOB_FM_v1.0.0.xlsx"
+    kbob_template = kbob_wip_dir / "Strukturvorlage_DataDictionary_KBOB_FM_v1.0.0.xlsx"
     if kbob_template.exists():
-        output_path = test_files_dir / "Strukturvorlage_DataDictionary_KBOB_FM_v1.0.1.xlsx"
+        output_path = kbob_wip_dir / "Strukturvorlage_DataDictionary_KBOB_FM_v1.0.1.xlsx"
         upgrade_template(kbob_template, output_path, impressum_source)
     else:
         print(f"Warning: {kbob_template} not found")

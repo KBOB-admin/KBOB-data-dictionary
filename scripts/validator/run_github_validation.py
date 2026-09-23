@@ -9,8 +9,9 @@ from pathlib import Path
 def discover_workbook(workspace: Path) -> Path:
     candidates = []
     preferred_patterns = [
-        'templates/*_test.xlsx',
-        'templates/*authoring-guidance*.xlsx',
+        'WIP data dictionaries/*/*.xlsx',
+        'SHARED data dictionaries/*/*.xlsx',
+        'PUBLISHED data dictionaries/*/*.xlsx',
         'HE_SEM_shemaforge/*_test.xlsx',
         'HE_SEM_shemaforge/*authoring-guidance*.xlsx',
         'HE_SEM_shemaforge/Strukturvorlage*.xlsx',

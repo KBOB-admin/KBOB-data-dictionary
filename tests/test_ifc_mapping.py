@@ -14,7 +14,7 @@ from validate_strukturvorlage import USER_DEFINED_IFC_URI, Validator  # noqa: E4
 
 class IfcMappingTests(unittest.TestCase):
     SOURCE = ROOT / 'templates' / 'Strukturvorlage_DataDictionary_empty_v1.0.0.xlsx'
-    USE_CASE_SOURCE = ROOT / 'templates' / 'test_files' / 'Use Case Grundlagen Ausschreibung H-K_v0.6.xlsx'
+    USE_CASE_SOURCE = ROOT / 'WIP data dictionaries' / 'IFMA' / 'Use Case Grundlagen Ausschreibung H-K_v0.6.xlsx'
 
     def setUp(self):
         self.validator = Validator(self.SOURCE)

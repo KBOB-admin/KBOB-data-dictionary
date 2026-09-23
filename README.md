@@ -22,12 +22,19 @@ Die Vorlagen legen die fachliche Eingabestruktur fest. Der Validator prüft dies
 
 Das Ergebnis ist ein klar strukturiertes und konsistentes Data Dictionary mit nachvollziehbaren Bezeichnungen, Definitionen und Referenzen.
 
-Die Struktur orientiert sich insbesondere an ISO 23386, ISO 23387, ISO 12006 und DCAT.
+Die Struktur orientiert sich insbesondere an ISO 23386, ISO 23387, ISO 12006 und DCAT. Die Ablage der Data Dictionaries folgt zusätzlich einem an ISO 19650 angelehnten Statusmodell:
+
+- [`WIP data dictionaries`](WIP%20data%20dictionaries/) – in Bearbeitung, noch nicht freigegeben
+- [`SHARED data dictionaries`](SHARED%20data%20dictionaries/) – zur Koordination und Prüfung freigegeben
+- [`PUBLISHED data dictionaries`](PUBLISHED%20data%20dictionaries/) – für die Nutzung autorisiert
+- [`ARCHIVED data dictionaries`](ARCHIVED%20data%20dictionaries/) – abgelöst oder zurückgezogen; Audit-Trail
+
+Innerhalb jedes Statusbereichs werden die Dateien nach verantwortlicher Organisation abgelegt. Leere Ausgangsvorlagen verbleiben unabhängig vom Statusmodell unter [`templates/`](templates/).
 
 ## Was Sie in diesem Repository finden
 
 - eine **leere Startvorlage**
-- ein **ausgefülltes Beispiel**
+- **Data Dictionaries nach Bearbeitungsstatus und Organisation**
 - eine **Validierungs-Pipeline**
 - eine **Schritt-für-Schritt-Anleitung**
 - ergänzende **deutschsprachige Dokumentation**
@@ -42,10 +49,10 @@ Verwenden Sie dann je nach Zielgruppe die passende leere Vorlage:
 - [Allgemeine Vorlage](templates/Strukturvorlage_DataDictionary_empty_v1.0.0.xlsx)
 - [Vorlage für öffentliche Auftraggeber](templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx)
 
-Wenn Sie ein Beispiel brauchen, schauen Sie hier:
+Wenn Sie ein ausgefülltes Data Dictionary brauchen, schauen Sie im WIP-Bereich der jeweiligen Organisation:
 
-- [Area Management](templates/test_files/Strukturvorlage_AreaMgmt_v0.6.0.xlsx)
-- [KBOB Facility Management](templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx)
+- [IFMA – Area Management](WIP%20data%20dictionaries/IFMA/Strukturvorlage_AreaMgmt_v0.6.0.xlsx)
+- [KBOB – Facility Management](WIP%20data%20dictionaries/KBOB/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx)
 
 ## Validierungs-Artefakte
 

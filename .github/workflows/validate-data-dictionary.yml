@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - 'templates/**/*.xlsx'
+      - 'WIP data dictionaries/**/*.xlsx'
+      - 'SHARED data dictionaries/**/*.xlsx'
+      - 'PUBLISHED data dictionaries/**/*.xlsx'
       - 'scripts/validator/validate_strukturvorlage.py'
       - 'scripts/validator/build_ifc_object_type_pairs.py'
       - 'scripts/validator/run_github_validation.py'
@@ -16,6 +19,9 @@ on:
   pull_request:
     paths:
       - 'templates/**/*.xlsx'
+      - 'WIP data dictionaries/**/*.xlsx'
+      - 'SHARED data dictionaries/**/*.xlsx'
+      - 'PUBLISHED data dictionaries/**/*.xlsx'
       - 'scripts/validator/validate_strukturvorlage.py'
       - 'scripts/validator/build_ifc_object_type_pairs.py'
       - 'scripts/validator/run_github_validation.py'
@@ -28,7 +34,7 @@ on:
       workbook_path:
         description: 'Relativer Pfad zur zu validierenden .xlsx-Datei'
         required: false
-        default: 'templates/test_files/Strukturvorlage_AreaMgmt_v0.6.0.xlsx'
+        default: 'WIP data dictionaries/IFMA/Strukturvorlage_AreaMgmt_v0.6.0.xlsx'
 
 jobs:
   validate:
@@ -57,7 +63,7 @@ jobs:
           if [ -n "${{ github.event.inputs.workbook_path }}" ]; then
             echo "path=${{ github.event.inputs.workbook_path }}" >> "$GITHUB_OUTPUT"
           else
-            echo "path=templates/test_files/Strukturvorlage_AreaMgmt_v0.6.0.xlsx" >> "$GITHUB_OUTPUT"
+            echo "path=WIP data dictionaries/IFMA/Strukturvorlage_AreaMgmt_v0.6.0.xlsx" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Run validation wrapper

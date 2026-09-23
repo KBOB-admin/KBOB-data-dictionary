@@ -20,7 +20,7 @@ Beispiel:
 
 ```bash
 git clone <REPOSITORY-URL>
-cd codat3_Validate
+cd KBOB-data-dictionary
 ```
 
 ## 3. Repository-Struktur verstehen
@@ -35,26 +35,26 @@ Die wichtigsten Bereiche sind:
   fachliche Erklärung der Validierungslogik
 - `docs/validierung-mit-github-actions.md`  
   Erklärung des GitHub-Validierungsablaufs
-- `templates/Strukturvorlage_DataDictionary_empty_v0.9.5.xlsx`  
-  kanonische leere Vorlage
+- `templates/Strukturvorlage_DataDictionary_empty_v1.0.0.xlsx`
+  allgemeine leere Vorlage
 - `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx`  
   kanonische leere Public-Vorlage
-- `templates/test_files/Strukturvorlage_AreaMgmt_v0.5.0.xlsx`  
-  ausgefülltes allgemeines Beispiel
-- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v1.0.0.xlsx`
-  ausgefülltes Public-Beispiel
+- `WIP data dictionaries/IFMA/Strukturvorlage_AreaMgmt_v0.6.0.xlsx`
+  ausgefülltes IFMA Data Dictionary in Bearbeitung
+- `WIP data dictionaries/KBOB/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx`
+  ausgefülltes KBOB Data Dictionary in Bearbeitung
 - `scripts/validator/run_github_validation.py`  
   GitHub-kompatibler Einstiegspunkt für die Validierung
 - `scripts/validator/validate_strukturvorlage.py`  
   zentrale Validierungslogik
 
-Wichtig: Diese vier `.xlsx`-Dateien bilden gemeinsam die kanonische Vorlagenfamilie und müssen bei jeder fachlichen oder strukturellen Anpassung synchron nachgeführt werden.
+Die leeren Vorlagen verbleiben unter `templates/`. Ausgefüllte Data Dictionaries werden nach Bearbeitungsstatus (`WIP`, `SHARED`, `PUBLISHED`, `ARCHIVED`) und danach nach verantwortlicher Organisation abgelegt.
 
 ## 4. Leere Vorlage herunterladen
 
 Verwenden Sie für neue Arbeiten je nach Zielgruppe eine der beiden leeren Startvorlagen:
 
-- `templates/Strukturvorlage_DataDictionary_empty_v0.9.5.xlsx`
+- `templates/Strukturvorlage_DataDictionary_empty_v1.0.0.xlsx`
 - `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx`
 
 Die Public-Variante enthält zusätzlich den Tab `Dictionary_public`.
@@ -63,8 +63,8 @@ Die Public-Variante enthält zusätzlich den Tab `Dictionary_public`.
 
 Wenn Sie zuerst verstehen möchten, wie eine ausgefüllte Datei aussieht, öffnen Sie je nach Bedarf eines der Beispiele:
 
-- `templates/test_files/Strukturvorlage_AreaMgmt_v0.5.0.xlsx`
-- `templates/test_files/Strukturvorlage_DataDictionary_KBOB_FM_v1.0.0.xlsx`
+- `WIP data dictionaries/IFMA/Strukturvorlage_AreaMgmt_v0.6.0.xlsx`
+- `WIP data dictionaries/KBOB/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx`
 
 Auch diese beiden Beispiel-Dateien müssen mit den leeren Vorlagen synchron bleiben.
 

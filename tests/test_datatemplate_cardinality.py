@@ -14,7 +14,7 @@ from validate_strukturvorlage import Validator  # noqa: E402
 
 
 class DataTemplateCardinalityTests(unittest.TestCase):
-    SOURCE = ROOT / 'templates' / 'test_files' / 'Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx'
+    SOURCE = ROOT / 'WIP data dictionaries' / 'KBOB' / 'Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx'
 
     def test_repeated_id_represents_one_template_with_multiple_groups(self):
         workbook = load_workbook(self.SOURCE, data_only=True, read_only=True)
