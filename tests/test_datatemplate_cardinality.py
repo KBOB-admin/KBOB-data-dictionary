@@ -21,7 +21,7 @@ class DataTemplateCardinalityTests(unittest.TestCase):
         sheet = workbook['Data_Template']
         rows = [
             (sheet.cell(row, 2).value, sheet.cell(row, 3).value)
-            for row in range(5, sheet.max_row + 1)
+            for row in range(6 if sheet.cell(3, 1).value == 'Validierung' else 5, sheet.max_row + 1)
             if sheet.cell(row, 2).value == 'gebaeude-dt'
         ]
         workbook.close()

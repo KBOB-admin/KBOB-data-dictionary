@@ -114,6 +114,29 @@ Das Sheet `Documents` darf vorläufig leer bleiben. Allein das Vorhandensein von
 
 Wenn eine Referenz nicht aufgelöst werden kann, entsteht ein Fehler.
 
+### Globale Wertelisten und Data-Template-Einschränkungen
+
+Die verbindliche Referenz einer Property auf eine globale Werteliste lautet:
+
+`Properties.EnumerationDesignation (EN)` → `Values.Designation (EN)` → `Values.Enumeration (EN)`.
+
+`Values.Designation (EN)` muss eindeutig sein. Eine lokale Einschränkung im `Data_Template` ist nur zulässig, wenn diese Referenz eindeutig aufgelöst wird. Die Zelle unterstützt:
+
+- leer: Property ist nicht zugeordnet,
+- `x`: Property ist zugeordnet; es wird keine lokale Wertelisteneinschränkung angegeben,
+- `[]`: die vollständige globale Enumeration gilt; dies ist gültig, erzeugt aber einen kosmetischen Hinweis und sollte vorzugsweise als `x` geschrieben werden,
+- Einzelwert: lokale Einschränkung auf einen Wert der globalen Enumeration,
+- Liste: lokale Einschränkung auf eine Teilmenge der globalen Enumeration.
+
+Die kanonische Liste verwendet eckige Klammern und Semikolons. Alphanumerische Werte benötigen doppelte Anführungszeichen, Zahlen nicht:
+
+```text
+["Wert 1"; "Wert 2"; "Wert 3"]
+[1.2; 2.2; 2.3]
+```
+
+Kommagetrennte Listen werden ebenfalls akzeptiert, erzeugen jedoch einen Hinweis auf die empfohlene Semikolon-Schreibweise. Nicht geschlossene Klammern oder Anführungszeichen, gemischte Trenner, leere Listenelemente und nicht in Anführungszeichen gesetzte alphanumerische Listenelemente sind Syntaxfehler. Jeder eingeschränkte Wert muss in der globalen `Values.Enumeration (EN)` enthalten sein.
+
 ## F. Formale Prüfungen
 
 Bestimmte Felder werden zusätzlich formal geprüft.
@@ -132,6 +155,10 @@ Dazu gehören zum Beispiel:
 - Identifier- oder Code-Formate,
 - kontrollierte Werte aus Listen,
 - Konsistenz zwischen Feldern und Referenzen.
+
+### IFC4.3-Datentypen in Properties
+
+`Properties.DataType (IFC)` muss einen Wert aus `Rules.IFC Data Type` enthalten. Diese Liste besteht aus den 109 konkreten Blatt-Typen des offiziellen IFC4.3.2.0-Selects `IfcValue`, also aus den Mitgliedern von `IfcSimpleValue`, `IfcMeasureValue` und `IfcDerivedMeasureValue`, sowie der zusätzlichen lokalen Auswahl `nicht definiert`. IFC-Entities, Enumerations- und andere SELECT-Typen ausserhalb von `IfcValue` sind keine gültigen Property-Datentypen.
 
 ## G. Reproduzierbare Referenzartefakte
 

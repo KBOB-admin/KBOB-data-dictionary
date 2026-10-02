@@ -13,7 +13,7 @@ from validate_strukturvorlage import USER_DEFINED_IFC_URI, Validator  # noqa: E4
 
 
 class IfcMappingTests(unittest.TestCase):
-    SOURCE = ROOT / 'templates' / 'Strukturvorlage_DataDictionary_empty_v1.0.0.xlsx'
+    SOURCE = ROOT / 'templates' / '2026_09_Strukturvorlage_Data_Dictionary_leer_v1.1.0.xlsx'
     USE_CASE_SOURCE = ROOT / 'WIP data dictionaries' / 'IFMA' / 'Use Case Grundlagen Ausschreibung H-K_v0.6.xlsx'
 
     def setUp(self):
@@ -21,6 +21,60 @@ class IfcMappingTests(unittest.TestCase):
 
     def finding_codes(self):
         return {finding.code for finding in self.validator.findings}
+
+    def test_v11_empty_formula_property_headings_are_ignored(self):
+        self.validator.validate_matrix()
+        self.assertNotIn('matrix_unknown_property_label', self.finding_codes())
+
+    def test_v11_datatemplate_guidance_and_metadata_structure(self):
+        sheet = self.validator.wb['Data_Template']
+        self.assertEqual('Validierung', sheet['A3'].value)
+        self.assertEqual(6, self.validator._sheet_start_row('Data_Template'))
+        self.assertFalse(any(sheet.cell(2, column).value == 0 for column in range(6, 53)))
+        structure = self.validator.parse_datatemplate_structure()
+        self.assertEqual(77, structure['document_block_anchor'])
+        self.assertEqual(83, structure['loin_anchor'])
+        self.assertEqual(88, structure['governance_anchor'])
+
+    def test_ifc43_value_datatype_rules_are_bound_and_complete(self):
+        values = self.validator._load_dropdown_values('IFC Data Type')
+        self.assertIn('IfcBoolean', values)
+        self.assertIn('IfcLabel', values)
+        self.assertIn('IfcLengthMeasure', values)
+        self.assertIn('nicht definiert', values)
+        self.assertNotIn('IfcWall', values)
+        self.assertNotIn('IfcWindowTypeEnum', values)
+        self.assertEqual(110, len(values))
+
+    def test_semicolon_override_accepts_quoted_strings(self):
+        mode, values = self.validator.parse_datatemplate_override('["Wert 1"; "Wert 2"]', 'Data_Template', 5, 'col-6')
+        self.assertEqual(('subset', ['Wert 1', 'Wert 2']), (mode, values))
+        self.assertEqual(set(), self.finding_codes())
+
+    def test_semicolon_override_accepts_unquoted_numbers(self):
+        mode, values = self.validator.parse_datatemplate_override('[1.2; 2.2; 2.3]', 'Data_Template', 5, 'col-6')
+        self.assertEqual(('subset', ['1.2', '2.2', '2.3']), (mode, values))
+        self.assertEqual(set(), self.finding_codes())
+
+    def test_comma_override_is_accepted_with_formatting_notice(self):
+        mode, values = self.validator.parse_datatemplate_override('[1.2, 2.2]', 'Data_Template', 5, 'col-6')
+        self.assertEqual(('subset', ['1.2', '2.2']), (mode, values))
+        self.assertIn('noncanonical_allowed_values_separator', self.finding_codes())
+
+    def test_empty_override_means_complete_enumeration_with_notice(self):
+        mode, values = self.validator.parse_datatemplate_override('[]', 'Data_Template', 5, 'col-6')
+        self.assertEqual(('all', []), (mode, values))
+        self.assertIn('empty_allowed_values_override', self.finding_codes())
+
+    def test_x_is_assignment_without_local_override(self):
+        mode, values = self.validator.parse_datatemplate_override('X', 'Data_Template', 5, 'col-6')
+        self.assertEqual(('assignment', []), (mode, values))
+        self.assertEqual(set(), self.finding_codes())
+
+    def test_malformed_override_is_rejected_separately(self):
+        mode, values = self.validator.parse_datatemplate_override('[Wert 1; "Wert 2"]', 'Data_Template', 5, 'col-6')
+        self.assertEqual(('invalid', []), (mode, values))
+        self.assertIn('malformed_allowed_values_override', self.finding_codes())
 
     def test_type_object_entity_column_is_not_validated(self):
         validator = Validator(self.USE_CASE_SOURCE)

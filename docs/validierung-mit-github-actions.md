@@ -4,9 +4,9 @@
 
 Die GitHub Action verwendet standardmässig:
 
-- `WIP data dictionaries/IFMA/Strukturvorlage_AreaMgmt_v0.6.0.xlsx`
+- `templates/2026_09_Strukturvorlage_Data_Dictionary_leer_v1.1.0.xlsx`
 
-Dieser Standardpfad dient als öffentlicher Referenztest für eine ausgefüllte und pipeline-gültige Beispielarbeitsmappe.
+Dieser Standardpfad dient als struktureller Referenztest für die aktuelle leere Vorlage. Fehlende, vom Benutzer einzutragende Metadaten werden bei dieser Datei als Warnungen gemeldet.
 
 ## Empfohlener Nutzer-Workflow
 

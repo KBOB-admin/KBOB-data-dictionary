@@ -29,8 +29,7 @@ Es soll Benutzern helfen,
 
 ### Für die Arbeit mit Excel-Dateien
 
-- `templates/Strukturvorlage_DataDictionary_empty_v1.0.0.xlsx`
-- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx`
+- `templates/2026_09_Strukturvorlage_Data_Dictionary_leer_v1.1.0.xlsx`
 - `WIP data dictionaries/IFMA/Strukturvorlage_AreaMgmt_v0.6.0.xlsx`
 - `WIP data dictionaries/KBOB/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx`
 

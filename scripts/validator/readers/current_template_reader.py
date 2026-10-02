@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 from urllib.parse import quote
+import json
 import re
 import openpyxl
 
@@ -49,6 +50,13 @@ def _split_values(raw: str | None) -> list[str]:
     txt = str(raw).strip()
     if not txt:
         return []
+    if txt.startswith('[') and txt.endswith(']'):
+        try:
+            parsed = json.loads(txt)
+            if isinstance(parsed, list):
+                return [str(value).strip() for value in parsed if str(value).strip()]
+        except json.JSONDecodeError:
+            pass
     parts = [p.strip().strip('"') for p in re.split(r'[;,]', txt)]
     return [p for p in parts if p]
 
@@ -194,9 +202,9 @@ def _parse_properties(ws, value_ws, meta: DictionaryMeta) -> tuple[list[DDProper
     value_rows = _parse_values(value_ws, meta) if value_ws is not None else []
     value_map = {}
     for vr in value_rows:
-        raw_id = _str(vr.get('Enumeration-ID'))
-        if raw_id:
-            value_map[raw_id] = vr
+        designation = _str(vr.get('Designation (EN)'))
+        if designation:
+            value_map.setdefault(designation, []).append(vr)
     value_base = f'{_lindas_base(meta)}allowed-value/'
     prop_base = f'{_lindas_base(meta)}property/'
     props = []
@@ -208,8 +216,9 @@ def _parse_properties(ws, value_ws, meta: DictionaryMeta) -> tuple[list[DDProper
         code = property_id or property_code or slugify(label_en or '')
         if not code:
             continue
-        value_list_id = _str(r.get('Enumeration-ID')) or _str(r.get('Values.Enumeration-ID'))
-        value_row = value_map.get(value_list_id or '')
+        enumeration_designation = _str(r.get('EnumerationDesignation (EN)'))
+        matching_value_rows = value_map.get(enumeration_designation or '', [])
+        value_row = matching_value_rows[0] if len(matching_value_rows) == 1 else None
         enum_values_raw = _str(value_row.get('Enumeration (EN)')) if value_row else None
         vals = _split_values(enum_values_raw)
         prop = DDProperty(
@@ -314,7 +323,8 @@ def _parse_matrix(ws, properties: list[DDProperty], group_refs: set[str]) -> lis
         if prop:
             property_cols.append((col_idx, prop.code, label))
     cps = []
-    for row_idx in range(5, ws.max_row + 1):
+    data_start = 6 if _str(ws.cell(3, 1).value) == 'Validierung' else 5
+    for row_idx in range(data_start, ws.max_row + 1):
         vals = [ws.cell(row_idx, c).value for c in range(1, ws.max_column + 1)]
         if not _row_has_meaningful_content(vals):
             continue

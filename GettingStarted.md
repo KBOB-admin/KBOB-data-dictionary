@@ -35,10 +35,8 @@ Die wichtigsten Bereiche sind:
   fachliche Erklärung der Validierungslogik
 - `docs/validierung-mit-github-actions.md`  
   Erklärung des GitHub-Validierungsablaufs
-- `templates/Strukturvorlage_DataDictionary_empty_v1.0.0.xlsx`
-  allgemeine leere Vorlage
-- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx`  
-  kanonische leere Public-Vorlage
+- `templates/2026_09_Strukturvorlage_Data_Dictionary_leer_v1.1.0.xlsx`
+  aktuelle leere Strukturvorlage
 - `WIP data dictionaries/IFMA/Strukturvorlage_AreaMgmt_v0.6.0.xlsx`
   ausgefülltes IFMA Data Dictionary in Bearbeitung
 - `WIP data dictionaries/KBOB/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx`
@@ -52,12 +50,9 @@ Die leeren Vorlagen verbleiben unter `templates/`. Ausgefüllte Data Dictionarie
 
 ## 4. Leere Vorlage herunterladen
 
-Verwenden Sie für neue Arbeiten je nach Zielgruppe eine der beiden leeren Startvorlagen:
+Verwenden Sie für neue Arbeiten die aktuelle leere Startvorlage:
 
-- `templates/Strukturvorlage_DataDictionary_empty_v1.0.0.xlsx`
-- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx`
-
-Die Public-Variante enthält zusätzlich den Tab `Dictionary_public`.
+- `templates/2026_09_Strukturvorlage_Data_Dictionary_leer_v1.1.0.xlsx`
 
 ## 5. Beispiel-Datei anschauen
 

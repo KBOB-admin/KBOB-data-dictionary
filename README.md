@@ -44,10 +44,9 @@ Innerhalb jedes Statusbereichs werden die Dateien nach verantwortlicher Organisa
 
 Lesen Sie zuerst [GettingStarted.md](GettingStarted.md).
 
-Verwenden Sie dann je nach Zielgruppe die passende leere Vorlage:
+Verwenden Sie die aktuelle leere Vorlage:
 
-- [Allgemeine Vorlage](templates/Strukturvorlage_DataDictionary_empty_v1.0.0.xlsx)
-- [Vorlage für öffentliche Auftraggeber](templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx)
+- [Strukturvorlage Data Dictionary v1.1.0](templates/2026_09_Strukturvorlage_Data_Dictionary_leer_v1.1.0.xlsx)
 
 Wenn Sie ein ausgefülltes Data Dictionary brauchen, schauen Sie im WIP-Bereich der jeweiligen Organisation:
 

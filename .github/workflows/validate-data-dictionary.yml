@@ -34,7 +34,7 @@ on:
       workbook_path:
         description: 'Relativer Pfad zur zu validierenden .xlsx-Datei'
         required: false
-        default: 'WIP data dictionaries/IFMA/Strukturvorlage_AreaMgmt_v0.6.0.xlsx'
+        default: 'templates/2026_09_Strukturvorlage_Data_Dictionary_leer_v1.1.0.xlsx'
 
 jobs:
   validate:
@@ -63,7 +63,7 @@ jobs:
           if [ -n "${{ github.event.inputs.workbook_path }}" ]; then
             echo "path=${{ github.event.inputs.workbook_path }}" >> "$GITHUB_OUTPUT"
           else
-            echo "path=WIP data dictionaries/IFMA/Strukturvorlage_AreaMgmt_v0.6.0.xlsx" >> "$GITHUB_OUTPUT"
+            echo "path=templates/2026_09_Strukturvorlage_Data_Dictionary_leer_v1.1.0.xlsx" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Run validation wrapper

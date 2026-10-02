@@ -391,10 +391,9 @@ class Validator:
         core_rows = self._dict_rows(core_sheet)
         public_rows = self._dict_rows(public_sheet) if public_sheet else {}
         is_blank_template = self.workbook_path.name in {
+            '2026_09_Strukturvorlage_Data_Dictionary_leer_v1.1.0.xlsx',
             'Strukturvorlage_DataDictionary_empty.xlsx',
             'Strukturvorlage_DataDictionary_empty_public.xlsx',
-            'Strukturvorlage_DataDictionary_empty_v0.9.5.xlsx',
-            'Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx',
         }
 
         for key in ['OrganizationCode', 'DictionaryName (EN)', 'DictionaryVersion', 'LifecycleStatus']:
@@ -545,6 +544,92 @@ class Validator:
             self.add_normalization(sheet, row, column, txt, normalized_json, 'Legacy delimiter-based list normalized to JSON-style list for validation comparison', 'list-format-normalization', True)
         return normalized
 
+    def parse_datatemplate_override(self, raw: str, sheet: str, row: int, column: str) -> tuple[str, list[str]]:
+        """Parse one Data_Template property cell without silently repairing malformed lists."""
+        text = str(raw).strip()
+        if text.casefold() == 'x':
+            return 'assignment', []
+        if text.startswith('[') != text.endswith(']'):
+            self.add('error', 'malformed_allowed_values_override', 'Data_Template override has unmatched list brackets.', sheet=sheet, row=row)
+            return 'invalid', []
+        if not text.startswith('['):
+            return 'subset', [text]
+
+        inner = text[1:-1].strip()
+        if not inner:
+            self.add('warning', 'empty_allowed_values_override', 'Data_Template override [] is equivalent to x: the complete global enumeration applies.', sheet=sheet, row=row)
+            return 'all', []
+
+        separators = []
+        quoted = False
+        escaped = False
+        for char in inner:
+            if escaped:
+                escaped = False
+                continue
+            if char == '\\' and quoted:
+                escaped = True
+                continue
+            if char == '"':
+                quoted = not quoted
+            elif not quoted and char in {';', ','}:
+                separators.append(char)
+        if quoted:
+            self.add('error', 'malformed_allowed_values_override', 'Data_Template override contains an unclosed quotation mark.', sheet=sheet, row=row)
+            return 'invalid', []
+        delimiter = ';' if ';' in separators else ',' if ',' in separators else None
+        if not delimiter:
+            tokens = [inner]
+        else:
+            if any(separator != delimiter for separator in separators):
+                self.add('error', 'malformed_allowed_values_override', 'Data_Template override mixes comma and semicolon separators.', sheet=sheet, row=row)
+                return 'invalid', []
+            tokens = []
+            current = []
+            quoted = False
+            escaped = False
+            for char in inner:
+                if escaped:
+                    current.append(char)
+                    escaped = False
+                elif char == '\\' and quoted:
+                    current.append(char)
+                    escaped = True
+                elif char == '"':
+                    current.append(char)
+                    quoted = not quoted
+                elif char == delimiter and not quoted:
+                    tokens.append(''.join(current).strip())
+                    current = []
+                else:
+                    current.append(char)
+            tokens.append(''.join(current).strip())
+        if any(not token for token in tokens):
+            self.add('error', 'malformed_allowed_values_override', 'Data_Template override contains an empty list item.', sheet=sheet, row=row)
+            return 'invalid', []
+
+        values = []
+        numeric = re.compile(r'^[+-]?\d+(?:[.,]\d+)?$')
+        for token in tokens:
+            if token.startswith('"') and token.endswith('"'):
+                try:
+                    value = json.loads(token)
+                except Exception:
+                    self.add('error', 'malformed_allowed_values_override', f'Data_Template override contains an invalid quoted value: {token}', sheet=sheet, row=row)
+                    return 'invalid', []
+                if not isinstance(value, str) or not value.strip():
+                    self.add('error', 'malformed_allowed_values_override', 'Data_Template override values must be non-empty strings or numbers.', sheet=sheet, row=row)
+                    return 'invalid', []
+                values.append(value.strip())
+            elif numeric.fullmatch(token):
+                values.append(token)
+            else:
+                self.add('error', 'malformed_allowed_values_override', f'Alphanumeric Data_Template override values must use double quotation marks: {token}', sheet=sheet, row=row)
+                return 'invalid', []
+        if delimiter == ',':
+            self.add('warning', 'noncanonical_allowed_values_separator', 'Comma-separated Data_Template lists are accepted; use semicolons as the canonical separator.', sheet=sheet, row=row)
+        return 'subset', values
+
     def is_strict_string_list_syntax(self, raw: str | None) -> bool:
         if not raw:
             return False
@@ -664,7 +749,8 @@ class Validator:
         if sheet_name in {'Classes', 'Properties', 'Values', 'Documents', 'GroupOfProperties'}:
             return 7
         if sheet_name == 'Data_Template':
-            return 5
+            marker = self._cell([self.wb[sheet_name].cell(3, 1).value], 1)
+            return 6 if marker == 'Validierung' else 5
         return 8
 
     def validate_wertekatalog(self):
@@ -672,6 +758,7 @@ class Validator:
         ws = self.wb[sheet_name]
         headers = self._sheet_headers(sheet_name)
         seen_ids = set()
+        seen_designations = set()
         for idx, row in self._iter_data_rows(ws, self._sheet_start_row(sheet_name)):
             katalog_id = self._cell(row, headers.get('Enumeration-ID', 5))
             label_en = self._cell(row, headers.get('Designation (EN)', 7))
@@ -707,6 +794,10 @@ class Validator:
                     seen_ids.add(katalog_id)
             if not label_en and katalog_id:
                 self.add('error', 'missing_required_english_translation', 'Values.Designation (EN) must be filled in English (EN) if an Enumeration-ID is given.', sheet=sheet_name, row=idx)
+            elif label_en in seen_designations:
+                self.add('error', 'duplicate_enumeration_designation', f'Values.Designation (EN) must be unique so Properties can resolve it unambiguously. Duplicate: {label_en}', sheet=sheet_name, row=idx)
+            elif label_en:
+                seen_designations.add(label_en)
             if label_en and not any([label_de, label_fr, label_it]):
                 self.add('error', 'missing_required_local_translation', 'Values.Designation requires at least one local-language value in DE/IT/FR in addition to English.', sheet=sheet_name, row=idx)
             if not values_en_raw:
@@ -977,11 +1068,14 @@ class Validator:
         ifc_uri_set = self.get_ifc_uri_set()
         seen_codes, seen_labels, seen_prop_short_codes = set(), {}, set()
         value_designations = set()
+        duplicate_value_designations = set()
         vws = self.wb[self._values_sheet()]
         vheaders = self._sheet_headers(self._values_sheet())
         for _vidx, vrow in self._iter_data_rows(vws, self._sheet_start_row(self._values_sheet())):
             vlabel_en = self._cell(vrow, vheaders.get('Designation (EN)', 10))
             if vlabel_en:
+                if vlabel_en in value_designations:
+                    duplicate_value_designations.add(vlabel_en)
                 value_designations.add(vlabel_en)
         for idx, row in self._iter_data_rows(ws, self._sheet_start_row(sheet_name)):
             prop_id = self._cell(row, headers.get('Property-ID', 5))
@@ -1049,6 +1143,8 @@ class Validator:
                 self.add('error', 'invalid_data_type', f'Invalid DataType (Base Type): {data_type}', sheet=sheet_name, row=idx)
             if not data_type_ifc:
                 self.add('error', 'missing_ifc_data_type', 'Property row missing DataType (IFC)', sheet=sheet_name, row=idx)
+            elif data_type_ifc not in self._load_dropdown_values('IFC Data Type'):
+                self.add('error', 'invalid_ifc_data_type', f'Properties.DataType (IFC) must be selected from Rules.IFC Data Type (IFC4.3 IfcValue types). Got: {data_type_ifc}', sheet=sheet_name, row=idx)
             property_lookup, property_translations = self._load_rules_multilingual_lookup('Property-Assignment', [
                 ('de', 'Merkmals-Zuordnung'),
                 ('fr', 'Attribution de propriété'),
@@ -1081,8 +1177,10 @@ class Validator:
                     elif expected_value and actual_value != expected_value:
                         self.add('warning', 'system_generated_property_assignment_override', f'{column_label} is inconsistent with the resolved authoritative property assignment concept. Manual value {actual_value} will be overwritten by {expected_value}.', sheet=sheet_name, row=idx)
                         self.add_normalization(sheet_name, idx, column_label, actual_value, expected_value, 'Manual multilingual property assignment overridden by authoritative Rules concept', 'derived-property-assignment-translation', True)
-            if enum_designation and enum_designation not in value_designations:
-                self.add('warning', 'noncanonical_value_list_id', f'EnumerationDesignation (EN) is present but does not match any existing Values.Designation (EN): {enum_designation}', sheet=sheet_name, row=idx)
+            if enum_designation in duplicate_value_designations:
+                self.add('error', 'ambiguous_enumeration_designation', f'Properties.EnumerationDesignation (EN) matches more than one Values.Designation (EN): {enum_designation}', sheet=sheet_name, row=idx)
+            elif enum_designation and enum_designation not in value_designations:
+                self.add('error', 'unknown_enumeration_designation', f'Properties.EnumerationDesignation (EN) must match an existing Values.Designation (EN): {enum_designation}', sheet=sheet_name, row=idx)
             if ifc_property_uri:
                 if not self.is_absolute_uri(ifc_property_uri):
                     self.add('error', 'invalid_ifc_property_uri', f'IFC_URI is not a valid absolute IRI: {ifc_property_uri}', sheet=sheet_name, row=idx)
@@ -1346,7 +1444,13 @@ class Validator:
         }
         property_cols = []
         for col_idx in range(property_start_col, property_end_col + 1):
-            label = self._cell([ws.cell(2, col_idx).value], 1)
+            raw_label = ws.cell(2, col_idx).value
+            # Formula-driven property headings in v1.1.0 may have a cached
+            # numeric zero while their source range is empty. Such cache
+            # values are empty placeholders, not property references.
+            if raw_label is None or raw_label is False or raw_label == 0:
+                continue
+            label = self._cell([raw_label], 1)
             if not label or label in structural_non_property_labels:
                 continue
             norm = self._norm(label)
@@ -1397,7 +1501,7 @@ class Validator:
         dropdown_status = self._load_dropdown_values('Status')
         template_records = {}
         seen_requirement_keys = set()
-        for ridx in range(5, ws.max_row + 1):
+        for ridx in range(self._sheet_start_row(matrix_sheet), ws.max_row + 1):
             row_values = [ws.cell(ridx, c).value for c in range(1, ws.max_column + 1)]
             if not self._row_has_meaningful_content(row_values):
                 continue
@@ -1430,13 +1534,21 @@ class Validator:
                         )
                     else:
                         seen_requirement_keys.add(requirement_key)
-                if str(cell).strip().lower() == 'x':
-                    continue
-                overrides = self.parse_allowed_list(cell, sheet=matrix_sheet, row=ridx, column=f'col-{col_idx}')
+                mode, overrides = self.parse_datatemplate_override(cell, matrix_sheet, ridx, f'col-{col_idx}')
                 allowed = property_allowed_values.get(prop_code, [])
+                if mode in {'assignment', 'invalid'}:
+                    continue
+                if mode == 'all' and not allowed:
+                    self.add('error', 'override_without_global_enumeration', f'Data_Template [] cannot reference a complete enumeration for Property {label} / {prop_code} because Properties.EnumerationDesignation (EN) does not resolve to a global Values enumeration.', sheet=matrix_sheet, row=ridx)
+                    continue
+                if mode == 'all':
+                    continue
+                if not allowed:
+                    self.add('error', 'override_without_global_enumeration', f'Data_Template cannot restrict Property {label} / {prop_code} because Properties.EnumerationDesignation (EN) does not resolve to a global Values enumeration.', sheet=matrix_sheet, row=ridx)
+                    continue
                 allowed_cmp = {a.strip().casefold() for a in allowed}
                 overrides_cmp = {str(o).strip().casefold() for o in overrides}
-                if allowed and not overrides_cmp.issubset(allowed_cmp):
+                if not overrides_cmp.issubset(allowed_cmp):
                     self.add('error', 'invalid_allowed_values_override', f'Data_Template override {overrides} is not a subset of the registered Values list for property {label} / {prop_code}.', sheet=matrix_sheet, row=ridx)
                 if governance_anchor and has_property_assignment:
                     governance_status = self._cell([ws.cell(ridx, governance_status_col).value], 1) if governance_status_col else None
@@ -1686,6 +1798,9 @@ class Validator:
             'property_anchor': property_anchor,
             'related_doc_anchor': related_doc_anchor,
             'related_doc_item_anchor': related_doc_item_anchor,
+            'document_block_anchor': document_block_anchor,
+            'loin_anchor': loin_anchor,
+            'governance_anchor': governance_anchor,
             'property_start_col': property_start_col,
             'property_end_col': property_end_col,
             'doc_relation_pairs': doc_relation_pairs,
@@ -1694,6 +1809,192 @@ class Validator:
 
 def _layman_mapping(code: str) -> dict:
     mapping = {
+        'missing_dictionary_field': {
+            'title': 'Erforderlicher Header-Wert fehlt',
+            'what_it_means': 'Ein für Identifikation oder Versionierung erforderliches Feld im Header ist leer.',
+            'what_to_do': 'Füllen Sie das im Fund genannte Header-Feld aus. Pflichtfelder sind OrganizationCode, DictionaryName (EN), DictionaryVersion und LifecycleStatus.',
+            'category': 'Header und Metadaten',
+        },
+        'invalid_organization_code': {
+            'title': 'Ungültiger OrganizationCode',
+            'what_it_means': 'Der OrganizationCode enthält unzulässige Zeichen oder ist länger als sieben Buchstaben.',
+            'what_to_do': 'Verwenden Sie ausschliesslich 1 bis 7 Buchstaben von A bis Z.',
+            'category': 'Header und Metadaten',
+        },
+        'invalid_semver': {
+            'title': 'Ungültige Dictionary-Version',
+            'what_it_means': 'DictionaryVersion entspricht nicht dem Format der semantischen Versionierung.',
+            'what_to_do': 'Verwenden Sie drei Zahlenblöcke wie 1.1.0.',
+            'category': 'Header und Metadaten',
+        },
+        'invalid_lifecycle': {
+            'title': 'Ungültiger LifecycleStatus',
+            'what_it_means': 'Der Header-Status ist kein zugelassener Lifecycle-Wert.',
+            'what_to_do': 'Wählen Sie einen Wert aus der LifecycleStatus-Liste im Rules-Tab.',
+            'category': 'Header und Metadaten',
+        },
+        'missing_required_local_translation': {
+            'title': 'Lokale Übersetzung fehlt',
+            'what_it_means': 'Neben der englischen Angabe fehlt mindestens eine lokale Sprachfassung in Deutsch, Französisch oder Italienisch.',
+            'what_to_do': 'Ergänzen Sie mindestens eine der verlangten lokalen Sprachspalten.',
+            'category': 'Mehrsprachigkeit',
+        },
+        'system_generated_dictionary_code_override': {
+            'title': 'DictionaryCode wird automatisch korrigiert',
+            'what_it_means': 'Der manuell eingetragene DictionaryCode stimmt nicht mit dem aus DictionaryName (EN) abgeleiteten Code überein.',
+            'what_to_do': 'Übernehmen Sie den vorgeschlagenen systemgenerierten Code oder lassen Sie das Feld leer.',
+            'category': 'Header und Metadaten',
+        },
+        'invalid_uri': {
+            'title': 'Ungültige Dictionary-URI',
+            'what_it_means': 'DictionaryUri ist keine gültige absolute URI.',
+            'what_to_do': 'Verwenden Sie die abgeleitete example.com-URI oder eine ausdrücklich freigegebene LINDAS-URI.',
+            'category': 'Header und Metadaten',
+        },
+        'noncanonical_placeholder_dictionary_uri': {
+            'title': 'Abweichende Platzhalter-URI',
+            'what_it_means': 'Die example.com-URI entspricht nicht der aus OrganizationCode und DictionaryCode abgeleiteten Form.',
+            'what_to_do': 'Übernehmen Sie die vom Validator vorgeschlagene neutrale Platzhalter-URI.',
+            'category': 'Header und Metadaten',
+        },
+        'approved_lindas_uri_requires_version': {
+            'title': 'Versionsangabe in LINDAS-URI fehlt',
+            'what_it_means': 'Eine freigegebene LINDAS DictionaryUri muss mit der konkreten semantischen Version enden.',
+            'what_to_do': 'Ergänzen Sie am URI-Ende dieselbe Version wie in DictionaryVersion.',
+            'category': 'Header und Metadaten',
+        },
+        'dictionary_uri_version_mismatch': {
+            'title': 'URI- und Dictionary-Version stimmen nicht überein',
+            'what_it_means': 'Die Version am Ende der LINDAS-URI weicht von DictionaryVersion ab.',
+            'what_to_do': 'Verwenden Sie in beiden Feldern dieselbe semantische Version.',
+            'category': 'Header und Metadaten',
+        },
+        'unsupported_dictionary_uri_authority': {
+            'title': 'Nicht zugelassene Dictionary-URI',
+            'what_it_means': 'DictionaryUri verwendet weder den neutralen example.com-Platzhalter noch die freigegebene LINDAS-Domain.',
+            'what_to_do': 'Verwenden Sie vor der Publikation example.com; tragen Sie eine LINDAS-URI nur nach ausdrücklicher Freigabe ein.',
+            'category': 'Header und Metadaten',
+        },
+        'invalid_i14y_dataset_uri': {
+            'title': 'Ungültige I14Y-Dataset-URI',
+            'what_it_means': 'Der optionale Wert ist keine absolute Dataset-URI unter i14y.admin.ch.',
+            'what_to_do': 'Korrigieren Sie die I14Y-URI oder lassen Sie das optionale Feld leer.',
+            'category': 'Header und Metadaten',
+        },
+        'invalid_ifc_data_type': {
+            'title': 'Ungültiger IFC-Datentyp',
+            'what_it_means': 'Properties.DataType (IFC) ist kein IFC4.3-Datentyp aus dem IfcValue-Auswahltyp.',
+            'what_to_do': 'Wählen Sie einen Datentyp aus Rules.IFC Data Type, beispielsweise IfcBoolean, IfcLabel oder IfcLengthMeasure.',
+            'category': 'Property-Definitionen',
+        },
+        'unknown_enumeration_designation': {
+            'title': 'Werteliste nicht gefunden',
+            'what_it_means': 'Properties.EnumerationDesignation (EN) verweist auf keine Values.Designation (EN).',
+            'what_to_do': 'Wählen Sie exakt die englische Bezeichnung einer vorhandenen Werteliste aus dem Values-Tab.',
+            'category': 'Wertelisten',
+        },
+        'ambiguous_enumeration_designation': {
+            'title': 'Wertelistenbezeichnung ist nicht eindeutig',
+            'what_it_means': 'Mehrere Values-Zeilen verwenden dieselbe Designation (EN); die Property-Referenz ist dadurch mehrdeutig.',
+            'what_to_do': 'Vergeben Sie für jede globale Werteliste eine eindeutige Values.Designation (EN).',
+            'category': 'Wertelisten',
+        },
+        'duplicate_enumeration_designation': {
+            'title': 'Doppelte Wertelistenbezeichnung',
+            'what_it_means': 'Values.Designation (EN) kommt mehrfach vor und kann nicht eindeutig referenziert werden.',
+            'what_to_do': 'Benennen Sie die globalen Wertelisten eindeutig.',
+            'category': 'Wertelisten',
+        },
+        'malformed_allowed_values_override': {
+            'title': 'Ungültiges Format der Data-Template-Werteliste',
+            'what_it_means': 'Die lokale Einschränkung ist syntaktisch fehlerhaft, beispielsweise wegen Klammern, Anführungszeichen oder leerer Einträge.',
+            'what_to_do': 'Verwenden Sie für Textwerte doppelte Anführungszeichen und Semikolons, z. B. ["Wert 1"; "Wert 2"]. Zahlen dürfen unquoted sein, z. B. [1.2; 2.2].',
+            'category': 'Data-Template-Zuordnungen',
+        },
+        'override_without_global_enumeration': {
+            'title': 'Lokale Werteliste ohne globale Enumeration',
+            'what_it_means': 'Im Data_Template wurde eine Einschränkung eingetragen, aber die Property verweist nicht eindeutig auf eine globale Values-Werteliste.',
+            'what_to_do': 'Verbinden Sie zuerst Properties.EnumerationDesignation (EN) mit Values.Designation (EN), oder verwenden Sie x ohne Wertelisteneinschränkung.',
+            'category': 'Data-Template-Zuordnungen',
+        },
+        'empty_allowed_values_override': {
+            'title': 'Leere lokale Werteliste',
+            'what_it_means': '[] ist gültig und bedeutet, dass die vollständige globale Enumeration gilt; die Schreibweise ist jedoch unnötig.',
+            'what_to_do': 'Verwenden Sie vorzugsweise x, wenn die vollständige globale Enumeration ohne Einschränkung gelten soll.',
+            'category': 'Data-Template-Zuordnungen',
+        },
+        'noncanonical_allowed_values_separator': {
+            'title': 'Nicht empfohlener Listentrenner',
+            'what_it_means': 'Die Kommaliste wurde akzeptiert, entspricht aber nicht der empfohlenen Schreibweise.',
+            'what_to_do': 'Verwenden Sie Semikolons, z. B. ["Wert 1"; "Wert 2"] oder [1.2; 2.2].',
+            'category': 'Data-Template-Zuordnungen',
+        },
+        'matrix_unknown_property_label': {
+            'title': 'Data-Template-Property nicht gefunden',
+            'what_it_means': 'Eine Property-Spaltenüberschrift im Data_Template kann keiner Property zugeordnet werden.',
+            'what_to_do': 'Verwenden Sie eine vorhandene Property-ID, einen Property-Code oder eine exakt übereinstimmende Bezeichnung.',
+            'category': 'Data-Template-Zuordnungen',
+        },
+        'matrix_unknown_object_label': {
+            'title': 'Data-Template-Klasse nicht gefunden',
+            'what_it_means': 'Die im Data_Template angegebene Klasse existiert nicht im Classes-Tab.',
+            'what_to_do': 'Verwenden Sie eine vorhandene Class-ID, einen Class-Code oder eine exakt übereinstimmende Bezeichnung.',
+            'category': 'Data-Template-Zuordnungen',
+        },
+        'matrix_unknown_group_label': {
+            'title': 'Property-Gruppe nicht gefunden',
+            'what_it_means': 'Die im Data_Template angegebene Gruppe existiert nicht im GroupOfProperties-Tab.',
+            'what_to_do': 'Korrigieren Sie die Gruppenreferenz oder erfassen Sie die Gruppe zuerst im GroupOfProperties-Tab.',
+            'category': 'Data-Template-Zuordnungen',
+        },
+        'matrix_missing_data_template_id': {
+            'title': 'DataTemplate-ID fehlt',
+            'what_it_means': 'Eine befüllte Data-Template-Zeile besitzt keine stabile DataTemplate-ID.',
+            'what_to_do': 'Tragen Sie eine kleingeschriebene, mit Bindestrichen strukturierte ID ein und wiederholen Sie sie für zusammengehörige Gruppenzeilen.',
+            'category': 'Data-Template-Zuordnungen',
+        },
+        'matrix_invalid_data_template_id': {
+            'title': 'Ungültige DataTemplate-ID',
+            'what_it_means': 'Die ID enthält Grossbuchstaben, Leerzeichen oder andere unzulässige Zeichen.',
+            'what_to_do': 'Verwenden Sie ausschliesslich Kleinbuchstaben, Zahlen und einzelne Bindestriche.',
+            'category': 'Data-Template-Zuordnungen',
+        },
+        'matrix_duplicate_property_requirement': {
+            'title': 'Doppelte Property-Anforderung',
+            'what_it_means': 'Dieselbe Property ist innerhalb derselben DataTemplate-ID und Gruppe mehrfach zugeordnet.',
+            'what_to_do': 'Entfernen Sie die doppelte Zuordnung oder verwenden Sie den korrekten Gruppenkontext.',
+            'category': 'Data-Template-Zuordnungen',
+        },
+        'matrix_missing_status': {
+            'title': 'Data-Template-Status fehlt',
+            'what_it_means': 'Eine Property-Zuordnung besitzt keinen Governance-Status.',
+            'what_to_do': 'Wählen Sie einen Status aus der Rules-Liste.',
+            'category': 'Data-Template-Governance',
+        },
+        'matrix_invalid_status': {
+            'title': 'Ungültiger Data-Template-Status',
+            'what_it_means': 'Der Governance-Status ist nicht in Rules.Status enthalten.',
+            'what_to_do': 'Wählen Sie einen vorhandenen Rules.Status-Wert.',
+            'category': 'Data-Template-Governance',
+        },
+        'matrix_missing_version_date': {
+            'title': 'Data-Template-Versiondatum fehlt',
+            'what_it_means': 'Eine Property-Zuordnung besitzt kein Version date.',
+            'what_to_do': 'Tragen Sie ein ISO-8601-Datum mit Zeitzone ein.',
+            'category': 'Data-Template-Governance',
+        },
+        'matrix_invalid_version_date': {
+            'title': 'Ungültiges Data-Template-Versiondatum',
+            'what_it_means': 'Das Version date entspricht nicht dem erwarteten ISO-8601-Format mit Zeitzone.',
+            'what_to_do': 'Verwenden Sie beispielsweise 2026-10-02T15:00:00Z.',
+            'category': 'Data-Template-Governance',
+        },
+        'matrix_missing_provenance': {
+            'title': 'Data-Template-Provenienz fehlt',
+            'what_it_means': 'Eine Property-Zuordnung besitzt keinen Herkunfts- oder Verantwortlichkeitsnachweis.',
+            'what_to_do': 'Tragen Sie einen nachvollziehbaren Provenance-Wert ein.',
+            'category': 'Data-Template-Governance',
+        },
         'ifc_reference_missing': {
             'title': 'IFC reference dataset unavailable',
             'what_it_means': 'Der Validator konnte nicht auf das autoritative IFC/bSDD-Referenzdataset zugreifen, das für URI-Gegenprüfungen verwendet wird.',
