@@ -16,7 +16,7 @@ from validate_strukturvorlage import Validator  # noqa: E402
 class V11ValidationTests(unittest.TestCase):
     SOURCE = ROOT / 'templates' / '2026_09_Strukturvorlage_Data_Dictionary_leer_v1.1.0.xlsx'
 
-    def make_workbook(self, override=None, enumeration_designation='Door states', ifc_type='IfcLabel'):
+    def make_workbook(self, override=None, enumeration_designation='Door states', base_type='STRING', ifc_type='IfcLabel'):
         directory = tempfile.TemporaryDirectory()
         path = Path(directory.name) / self.SOURCE.name
         shutil.copy2(self.SOURCE, path)
@@ -29,7 +29,7 @@ class V11ValidationTests(unittest.TestCase):
             'Bezeichnung (DE)': 'Türstatus',
             'Description (EN)': 'State of the door',
             'Beschreibung (DE)': 'Status der Tür',
-            'DataType\n(Base Type)': 'STRING',
+            'DataType\n(Base Type)': base_type,
             'DataType\n(IFC)': ifc_type,
             'EnumerationDesignation (EN)': enumeration_designation,
         }
@@ -91,12 +91,51 @@ class V11ValidationTests(unittest.TestCase):
         validator.validate_matrix()
         self.assertIn('invalid_allowed_values_override', self.codes(validator))
 
+    def test_localized_override_is_accepted_from_any_language_list(self):
+        directory, path = self.make_workbook(override='["Offen"; "Verriegelt"]')
+        self.addCleanup(directory.cleanup)
+        validator = Validator(path)
+        validator.validate_matrix()
+        self.assertNotIn('invalid_allowed_values_override', self.codes(validator))
+
     def test_override_without_connected_enumeration_is_rejected(self):
         directory, path = self.make_workbook(override='"Open"', enumeration_designation=None)
         self.addCleanup(directory.cleanup)
         validator = Validator(path)
         validator.validate_matrix()
         self.assertIn('override_without_global_enumeration', self.codes(validator))
+
+    def test_boolean_override_is_inferred_without_explicit_enumeration(self):
+        directory, path = self.make_workbook(
+            override='["true"]',
+            enumeration_designation=None,
+            base_type='BOOLEAN',
+            ifc_type='IfcBoolean',
+        )
+        self.addCleanup(directory.cleanup)
+        validator = Validator(path)
+        validator.validate_matrix()
+        codes = self.codes(validator)
+        self.assertNotIn('override_without_global_enumeration', codes)
+        self.assertNotIn('invalid_allowed_values_override', codes)
+        self.assertIn('boolean_enumeration_inferred_from_datatype', codes)
+
+    def test_boolean_base_type_rejects_ifc_logical(self):
+        directory, path = self.make_workbook(base_type='BOOLEAN', ifc_type='IfcLogical')
+        self.addCleanup(directory.cleanup)
+        validator = Validator(path)
+        validator.validate_properties()
+        self.assertIn('incompatible_property_data_types', self.codes(validator))
+
+    def test_governance_findings_are_emitted_once_per_populated_row(self):
+        directory, path = self.make_workbook(override='["Open"; "Closed"]')
+        self.addCleanup(directory.cleanup)
+        validator = Validator(path)
+        validator.validate_matrix()
+        codes = [finding.code for finding in validator.findings]
+        self.assertEqual(1, codes.count('matrix_missing_status'))
+        self.assertEqual(1, codes.count('matrix_missing_version_date'))
+        self.assertEqual(1, codes.count('matrix_missing_provenance'))
 
     def test_unknown_enumeration_designation_is_rejected(self):
         directory, path = self.make_workbook(enumeration_designation='Missing states')

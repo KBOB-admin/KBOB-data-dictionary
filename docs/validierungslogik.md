@@ -64,6 +64,11 @@ Beispiele:
 - URI
 - kontrollierte Werte aus Dropdowns
 
+Der Validator prüft zusätzlich die fachliche Kompatibilität zwischen
+`Properties.DataType (Base Type)` und `Properties.DataType (IFC)`. `BOOLEAN`
+muss mit `IfcBoolean` kombiniert werden; `IfcLogical` ist ein dreiwertiger
+logischer IFC-Typ und deshalb kein Ersatz für ein zweistelliges Boolean-Feld.
+
 Datumsfelder müssen im MVP als ISO-8601-Datum mit Zeitzone vorliegen, zum Beispiel:
 
 - `2026-06-18T15:30+02:00`
@@ -77,6 +82,21 @@ Dann gilt:
 - nur diese Werte sind erlaubt,
 - freie Texteingaben können fehlschlagen,
 - die Werte müssen zur jeweiligen Liste in `Rules` passen.
+
+Lokale Einschränkungen im `Data_Template` werden gegen die Vereinigungsmenge
+aller vier Sprachlisten der über `Properties.EnumerationDesignation (EN)`
+verknüpften `Values`-Zeile geprüft: `Enumeration (EN)`, `Werteliste (DE)`,
+`Liste de valeurs (FR)` und `Lista valori (IT)`. Dadurch dürfen lokale
+Data-Template-Listen Werte aus mehreren Sprachlisten kombinieren.
+
+Fehlt die explizite Enumeration-Verknüpfung, darf der Validator `true` und
+`false` nur dann aus dem Datentyp ableiten, wenn gleichzeitig der Basistyp
+`BOOLEAN` und der IFC-Typ `IfcBoolean` gesetzt sind. Diese Ableitung erzeugt
+einen Hinweis; die explizite Verknüpfung bleibt empfohlen.
+
+Status, Version date und Provenance werden genau einmal pro befüllter
+`Data_Template`-Zeile geprüft, unabhängig davon, ob die Zuordnung als `x`,
+`[]` oder als lokale Werteteilmenge erfasst wurde.
 
 Wichtige aktuelle Beispiele sind:
 

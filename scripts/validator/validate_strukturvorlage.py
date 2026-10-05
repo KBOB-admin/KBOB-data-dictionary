@@ -1145,6 +1145,16 @@ class Validator:
                 self.add('error', 'missing_ifc_data_type', 'Property row missing DataType (IFC)', sheet=sheet_name, row=idx)
             elif data_type_ifc not in self._load_dropdown_values('IFC Data Type'):
                 self.add('error', 'invalid_ifc_data_type', f'Properties.DataType (IFC) must be selected from Rules.IFC Data Type (IFC4.3 IfcValue types). Got: {data_type_ifc}', sheet=sheet_name, row=idx)
+            if data_type and data_type_ifc:
+                base_type = data_type.upper()
+                if (base_type == 'BOOLEAN') != (data_type_ifc == 'IfcBoolean'):
+                    self.add(
+                        'error',
+                        'incompatible_property_data_types',
+                        f'Properties.DataType (Base Type) {data_type} and Properties.DataType (IFC) {data_type_ifc} are incompatible. BOOLEAN must be paired with IfcBoolean, and IfcBoolean must be paired with BOOLEAN.',
+                        sheet=sheet_name,
+                        row=idx,
+                    )
             property_lookup, property_translations = self._load_rules_multilingual_lookup('Property-Assignment', [
                 ('de', 'Merkmals-Zuordnung'),
                 ('fr', 'Attribution de propriété'),
@@ -1372,14 +1382,45 @@ class Validator:
         property_codes_registered = set()
         property_label_map = {}
         property_allowed_values = {}
+        property_boolean_without_enumeration = {}
+        values_sheet = self._values_sheet()
+        values_ws = self.wb[values_sheet]
+        values_headers = self._sheet_headers(values_sheet)
+        enumeration_values_by_designation = {}
+        for _idx, value_row in self._iter_data_rows(values_ws, self._sheet_start_row(values_sheet)):
+            enumeration_designation = self._cell(value_row, values_headers.get('Designation (EN)', 7))
+            if not enumeration_designation:
+                continue
+            multilingual_values = []
+            for column_name, fallback_column in [
+                ('Enumeration (EN)', 11),
+                ('Werteliste\n(DE)', 12),
+                ('Liste de valeurs\n(FR)', 13),
+                ('Lista valori\n(IT)', 14),
+            ]:
+                raw_values = self._cell(value_row, values_headers.get(column_name, fallback_column))
+                multilingual_values.extend(self.parse_allowed_list(raw_values))
+            enumeration_values_by_designation[enumeration_designation] = list(dict.fromkeys(multilingual_values))
         for idx, row in self._iter_data_rows(properties_ws, self._sheet_start_row(properties_sheet)):
             property_id = self._cell(row, properties_headers.get('Property-ID', 5))
             property_code = self._cell(row, properties_headers.get('Property-Code', 6))
             designation_en = self._cell(row, properties_headers.get('Designation (EN)', 11))
+            enumeration_designation = self._cell(row, properties_headers.get('EnumerationDesignation (EN)', 21))
+            base_type = self._cell(row, properties_headers.get('DataType\n(Base Type)', 19))
+            ifc_data_type = self._cell(row, properties_headers.get('DataType\n(IFC)', 20))
             canonical_code = property_id or property_code or (self.slugify(designation_en) if designation_en else None)
             if canonical_code:
                 property_codes_registered.add(canonical_code)
-                property_allowed_values[canonical_code] = self.allowed_values_for_property(canonical_code)
+                allowed_values = enumeration_values_by_designation.get(enumeration_designation, [])
+                is_inferred_boolean = (
+                    not enumeration_designation
+                    and (base_type or '').upper() == 'BOOLEAN'
+                    and ifc_data_type == 'IfcBoolean'
+                )
+                for property_key in {canonical_code, property_id, property_code} - {None}:
+                    property_codes_registered.add(property_key)
+                    property_allowed_values[property_key] = allowed_values
+                    property_boolean_without_enumeration[property_key] = is_inferred_boolean
             for val in [
                 property_id,
                 property_code,
@@ -1538,6 +1579,15 @@ class Validator:
                 allowed = property_allowed_values.get(prop_code, [])
                 if mode in {'assignment', 'invalid'}:
                     continue
+                if not allowed and property_boolean_without_enumeration.get(prop_code):
+                    allowed = ['true', 'false']
+                    self.add(
+                        'warning',
+                        'boolean_enumeration_inferred_from_datatype',
+                        f'Boolean values for Property {label} / {prop_code} were inferred from DataType (Base Type) BOOLEAN and DataType (IFC) IfcBoolean. Add an explicit Properties.EnumerationDesignation (EN) link to the corresponding Values enumeration.',
+                        sheet=matrix_sheet,
+                        row=ridx,
+                    )
                 if mode == 'all' and not allowed:
                     self.add('error', 'override_without_global_enumeration', f'Data_Template [] cannot reference a complete enumeration for Property {label} / {prop_code} because Properties.EnumerationDesignation (EN) does not resolve to a global Values enumeration.', sheet=matrix_sheet, row=ridx)
                     continue
@@ -1549,21 +1599,23 @@ class Validator:
                 allowed_cmp = {a.strip().casefold() for a in allowed}
                 overrides_cmp = {str(o).strip().casefold() for o in overrides}
                 if not overrides_cmp.issubset(allowed_cmp):
-                    self.add('error', 'invalid_allowed_values_override', f'Data_Template override {overrides} is not a subset of the registered Values list for property {label} / {prop_code}.', sheet=matrix_sheet, row=ridx)
-                if governance_anchor and has_property_assignment:
-                    governance_status = self._cell([ws.cell(ridx, governance_status_col).value], 1) if governance_status_col else None
-                    governance_version_date = self._cell([ws.cell(ridx, governance_version_date_col).value], 1) if governance_version_date_col else None
-                    governance_prov = self._cell([ws.cell(ridx, governance_prov_col).value], 1) if governance_prov_col else None
-                    if not governance_status:
-                        self.add('error', 'matrix_missing_status', 'Data_Template.Status is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
-                    elif dropdown_status and governance_status not in dropdown_status:
-                        self.add('error', 'matrix_invalid_status', f'Data_Template.Status must come from Rules.Status. Got: {governance_status}', sheet=matrix_sheet, row=ridx)
-                    if not governance_version_date:
-                        self.add('error', 'matrix_missing_version_date', 'Data_Template.Version date is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
-                    elif not ISO_DT_RE.match(governance_version_date):
-                        self.add('error', 'matrix_invalid_version_date', f'Data_Template.Version date should be ISO 8601 date-time with timezone, got: {governance_version_date}', sheet=matrix_sheet, row=ridx)
-                    if not governance_prov:
-                        self.add('error', 'matrix_missing_provenance', 'Data_Template.Provenance (PROV) is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
+                    missing_overrides = [o for o in overrides if str(o).strip().casefold() not in allowed_cmp]
+                    self.add('error', 'invalid_allowed_values_override', f'Data_Template override contains values absent from the union of all registered EN/DE/FR/IT Values lists for property {label} / {prop_code}: {missing_overrides}', sheet=matrix_sheet, row=ridx)
+
+            if governance_anchor and has_property_assignment:
+                governance_status = self._cell([ws.cell(ridx, governance_status_col).value], 1) if governance_status_col else None
+                governance_version_date = self._cell([ws.cell(ridx, governance_version_date_col).value], 1) if governance_version_date_col else None
+                governance_prov = self._cell([ws.cell(ridx, governance_prov_col).value], 1) if governance_prov_col else None
+                if not governance_status:
+                    self.add('error', 'matrix_missing_status', 'Data_Template.Status is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
+                elif dropdown_status and governance_status not in dropdown_status:
+                    self.add('error', 'matrix_invalid_status', f'Data_Template.Status must come from Rules.Status. Got: {governance_status}', sheet=matrix_sheet, row=ridx)
+                if not governance_version_date:
+                    self.add('error', 'matrix_missing_version_date', 'Data_Template.Version date is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
+                elif not ISO_DT_RE.match(governance_version_date):
+                    self.add('error', 'matrix_invalid_version_date', f'Data_Template.Version date should be ISO 8601 date-time with timezone, got: {governance_version_date}', sheet=matrix_sheet, row=ridx)
+                if not governance_prov:
+                    self.add('error', 'matrix_missing_provenance', 'Data_Template.Provenance (PROV) is required for rows with class/property assignments.', sheet=matrix_sheet, row=ridx)
 
             has_template_content = bool(object_label or property_group_label or has_property_assignment)
             if data_template_id_col and has_template_content:
@@ -1887,6 +1939,12 @@ def _layman_mapping(code: str) -> dict:
             'what_to_do': 'Wählen Sie einen Datentyp aus Rules.IFC Data Type, beispielsweise IfcBoolean, IfcLabel oder IfcLengthMeasure.',
             'category': 'Property-Definitionen',
         },
+        'incompatible_property_data_types': {
+            'title': 'Nicht kompatible Property-Datentypen',
+            'what_it_means': 'Properties.DataType (Base Type) und Properties.DataType (IFC) beschreiben nicht denselben Wertetyp. Insbesondere ist IfcLogical nicht gleichbedeutend mit BOOLEAN.',
+            'what_to_do': 'Verwenden Sie für BOOLEAN den IFC-Datentyp IfcBoolean; verwenden Sie IfcBoolean nur zusammen mit BOOLEAN.',
+            'category': 'Property-Definitionen',
+        },
         'unknown_enumeration_designation': {
             'title': 'Werteliste nicht gefunden',
             'what_it_means': 'Properties.EnumerationDesignation (EN) verweist auf keine Values.Designation (EN).',
@@ -1915,6 +1973,12 @@ def _layman_mapping(code: str) -> dict:
             'title': 'Lokale Werteliste ohne globale Enumeration',
             'what_it_means': 'Im Data_Template wurde eine Einschränkung eingetragen, aber die Property verweist nicht eindeutig auf eine globale Values-Werteliste.',
             'what_to_do': 'Verbinden Sie zuerst Properties.EnumerationDesignation (EN) mit Values.Designation (EN), oder verwenden Sie x ohne Wertelisteneinschränkung.',
+            'category': 'Data-Template-Zuordnungen',
+        },
+        'boolean_enumeration_inferred_from_datatype': {
+            'title': 'Boolean-Werteliste aus Datentyp abgeleitet',
+            'what_it_means': 'Der Validator konnte true/false aus BOOLEAN und IfcBoolean ableiten, obwohl die explizite Verknüpfung zur globalen Values-Enumeration fehlt.',
+            'what_to_do': 'Ergänzen Sie Properties.EnumerationDesignation (EN) mit der passenden Values.Designation (EN), damit die Beziehung ausdrücklich dokumentiert ist.',
             'category': 'Data-Template-Zuordnungen',
         },
         'empty_allowed_values_override': {
@@ -2027,7 +2091,7 @@ def _layman_mapping(code: str) -> dict:
         },
         'invalid_allowed_values_override': {
             'title': 'Selected values do not match the allowed values',
-            'what_it_means': 'Die für eine Klassen-/Property-Kombination ausgewählten Werte gehören nicht zu den offiziellen Allowed Values dieses Properties.',
+            'what_it_means': 'Die für eine Klassen-/Property-Kombination ausgewählten Werte gehören zu keiner der offiziellen EN-, DE-, FR- oder IT-Wertelisten dieses Properties.',
             'what_to_do': 'Korrigieren Sie die Werte oder erweitern Sie die offiziellen Values, falls die fehlenden Werte tatsächlich benötigt werden.',
             'category': 'Data template assignment issues',
         },
