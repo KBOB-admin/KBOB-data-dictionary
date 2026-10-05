@@ -1,19 +1,21 @@
 # IDS Readiness Assessment for v0.9.5 Templates
 
+> Historische technische Hintergrundnotiz. Dieses Dokument ist kein aktuelles
+> Benutzerhandbuch und beschreibt keinen Einreichungsprozess. Für die aktuelle
+> Nutzung gelten `docs/strukturvorlage-schritt-fuer-schritt.md` und
+> `docs/repository-housekeeping.md`.
+
 Date: 2026-07-16
 Author: datadict
 
 ## Scope
 
-Inspected templates:
+Current canonical template reference:
 
-- `templates/Strukturvorlage_DataDictionary_empty_public_v0.9.5.xlsx`
-- `templates/Strukturvorlage_DataDictionary_empty_v1.0.0.xlsx`
+- `templates/2026_09_Strukturvorlage_Data_Dictionary_leer_v1.1.0.xlsx`
 
 Inspected implementation:
 
-- `P_workspace_codat3_schemaforge_public/scripts/map_to_rdf.py`
-- `P_workspace_codat3_schemaforge_public/scripts/export_i14y_json.py`
 - `scripts/validator/validate_strukturvorlage.py`
 - `scripts/validator/readers/current_template_reader.py`
 

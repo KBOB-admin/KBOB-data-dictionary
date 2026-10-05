@@ -1,4 +1,8 @@
-# ARCHIVED data dictionaries
+# ARCHIVED Data Dictionaries
 
-Superseded or withdrawn Data Dictionaries retained as an audit trail. Archived content must not be used as the current version. Store each file under the responsible organisation.
+Dieser Bereich enthält abgelöste oder zurückgezogene Versionen als Audit-Trail.
+Archivierte Inhalte dürfen nicht als aktuelle Fassung verwendet werden. Jede
+Datei ist im Unterordner der verantwortlichen Organisation abzulegen.
 
+Massgeblich sind die
+[Housekeeping-Regeln](../docs/repository-housekeeping.md).

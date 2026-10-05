@@ -1,4 +1,9 @@
-# WIP data dictionaries
+# WIP Data Dictionaries
 
-Data Dictionaries in active development. Content here is not yet approved for sharing or operational use. Store each file under the responsible organisation.
+Dieser Bereich enthält Data Dictionaries in aktiver Bearbeitung. Die Inhalte
+sind weder zur Weitergabe noch zur operativen Nutzung freigegeben und dürfen
+Blocking Errors enthalten. Jede Datei ist im Unterordner der fachlich
+verantwortlichen Organisation abzulegen.
 
+Massgeblich sind die
+[Housekeeping-Regeln](../docs/repository-housekeeping.md).

@@ -16,9 +16,11 @@ Es soll Benutzern helfen,
 ## Empfohlene Lesereihenfolge
 
 1. `GettingStarted.md`
-2. `README.md`
-3. `docs/validierungslogik.md`
-4. `docs/validierung-mit-github-actions.md`
+2. `docs/strukturvorlage-schritt-fuer-schritt.md`
+3. `docs/repository-housekeeping.md`
+4. `README.md`
+5. `docs/validierungslogik.md`
+6. `docs/validierung-mit-github-actions.md`
 
 ## Wichtigste Dateien
 
@@ -26,11 +28,14 @@ Es soll Benutzern helfen,
 
 - `GettingStarted.md`
 - `README.md`
+- `docs/strukturvorlage-schritt-fuer-schritt.md`
+- `docs/repository-housekeeping.md`
+- `docs/Leitfaden_Strukturvorlage_Housekeeping_und_Anleitung.pdf`
 
 ### Für die Arbeit mit Excel-Dateien
 
 - `templates/2026_09_Strukturvorlage_Data_Dictionary_leer_v1.1.0.xlsx`
-- `WIP data dictionaries/IFMA/Strukturvorlage_AreaMgmt_v0.6.0.xlsx`
+- `WIP data dictionaries/IFMA/CHE.5539 IFMA_Data Template_AreaMgmt_v0.9.5.xlsx`
 - `WIP data dictionaries/KBOB/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx`
 
 Ausgefüllte Data Dictionaries durchlaufen die Statusbereiche `WIP data dictionaries`, `SHARED data dictionaries`, `PUBLISHED data dictionaries` und `ARCHIVED data dictionaries`. Innerhalb jedes Bereichs erfolgt die Ablage nach Organisation.
@@ -45,6 +50,7 @@ Ausgefüllte Data Dictionaries durchlaufen die Statusbereiche `WIP data dictiona
 - `.github/workflows/validate-data-dictionary.yml`
 - `scripts/validator/run_github_validation.py`
 - `docs/validierung-mit-github-actions.md`
+- `validator_tests/` für automatisierte Validator-Regressionstests
 
 ## Was Benutzer im Normalfall nicht anfassen müssen
 

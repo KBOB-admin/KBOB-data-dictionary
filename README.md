@@ -36,13 +36,21 @@ Innerhalb jedes Statusbereichs werden die Dateien nach verantwortlicher Organisa
 - eine **leere Startvorlage**
 - **Data Dictionaries nach Bearbeitungsstatus und Organisation**
 - eine **Validierungs-Pipeline**
-- eine **Schritt-für-Schritt-Anleitung**
+- eine [**Schritt-für-Schritt-Anleitung**](docs/strukturvorlage-schritt-fuer-schritt.md)
 - ergänzende **deutschsprachige Dokumentation**
 - maschinenlesbare **Validierungsberichte und validierte Arbeitsmappen** als GitHub-Artefakte
+- verbindliche [Housekeeping- und Ablageregeln](docs/repository-housekeeping.md)
+- einen zusammengeführten [PDF-Leitfaden](docs/Leitfaden_Strukturvorlage_Housekeeping_und_Anleitung.pdf)
+
+Der Ordner [`validator_tests/`](validator_tests/) enthält ausschliesslich
+automatisierte Regressionstests für den Validator. Data-Dictionary-Dateien
+dürfen dort nicht abgelegt werden.
 
 ## Womit Sie starten sollen
 
-Lesen Sie zuerst [GettingStarted.md](GettingStarted.md).
+Lesen Sie zuerst die
+[Schritt-für-Schritt-Anleitung](docs/strukturvorlage-schritt-fuer-schritt.md)
+und die [Housekeeping-Regeln](docs/repository-housekeeping.md).
 
 Verwenden Sie die aktuelle leere Vorlage:
 
@@ -50,7 +58,7 @@ Verwenden Sie die aktuelle leere Vorlage:
 
 Wenn Sie ein ausgefülltes Data Dictionary brauchen, schauen Sie im WIP-Bereich der jeweiligen Organisation:
 
-- [IFMA – Area Management](WIP%20data%20dictionaries/IFMA/Strukturvorlage_AreaMgmt_v0.6.0.xlsx)
+- [IFMA – Area Management v0.9.5](WIP%20data%20dictionaries/IFMA/CHE.5539%20IFMA_Data%20Template_AreaMgmt_v0.9.5.xlsx)
 - [KBOB – Facility Management](WIP%20data%20dictionaries/KBOB/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx)
 
 ## Validierungs-Artefakte

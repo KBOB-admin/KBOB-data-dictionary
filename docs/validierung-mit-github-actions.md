@@ -17,6 +17,11 @@ Dieser Standardpfad dient als struktureller Referenztest für die aktuelle leere
 5. Optional `workbook_path` auf den relativen Pfad der eigenen Datei setzen
 6. Validierungsbericht und Artefakte herunterladen und lesen
 
+Externe Beitragende arbeiten im eigenen Fork und reichen ihre Datei über einen
+Pull Request ein. Sie benötigen keinen direkten Schreibzugriff auf das
+Original-Repository. Der vollständige Ablauf ist in
+`docs/strukturvorlage-schritt-fuer-schritt.md` beschrieben.
+
 ## Öffentliche Blattnamen
 
 Die öffentliche Vorlage und die Validierung erwarten im MVP diese Blattnamen:
@@ -37,6 +42,9 @@ Die Validierung erzeugt Berichte unter:
 - `Validation_output/`
 
 In GitHub Actions werden diese Berichte zusätzlich als Artefakte hochgeladen. Wenn die Arbeitsmappe `pipeline_valid` ist, wird ausserdem eine validierte `.xlsx` mit system-generierten Rückschreibungen in `Validation_output/` erzeugt und als Artefakt mit hochgeladen.
+
+Solange mindestens ein Blocking Error besteht, wird keine validierte
+Arbeitsmappe mit system-generierten Rückschreibungen erzeugt.
 
 ## Aktueller Geltungsbereich
 

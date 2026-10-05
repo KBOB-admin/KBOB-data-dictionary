@@ -2,19 +2,27 @@
 
 Diese Anleitung hilft Ihnen Schritt für Schritt beim Einstieg in das öffentliche Repository.
 
-## 1. Zugriff anfragen
+## 1. Beitragsweg wählen
 
-Bevor Sie mit dem Repository arbeiten, fordern Sie bitte Zugriff an.
+Für Beiträge ist keine Mitgliedschaft und kein direkter Schreibzugriff auf das
+Repository erforderlich. Der Standardweg ist ein eigener Fork mit
+anschliessendem Pull Request.
 
-Senden Sie dazu eine E-Mail an:
+Falls eine Organisation diesen GitHub-Weg nicht selbst durchführen kann, darf
+sie als Fallback eine Anfrage an folgende Adresse senden:
 
-**repo-access@example.org**
+**info@intop3.ch**
 
-> Hinweis: Diese Adresse ist aktuell ein Platzhalter und kann später durch die echte Kontaktadresse ersetzt werden.
+Dieses Postfach wird einmal pro Woche bearbeitet. Es kann deshalb zu einer
+Wartezeit von bis zu sieben Kalendertagen kommen. Die E-Mail-Anfrage begründet
+weder einen Anspruch auf Aufnahme noch eine fachliche Freigabe der
+eingereichten Inhalte.
 
-## 2. Repository öffnen oder klonen
+## 2. Repository forken oder klonen
 
-Sobald Sie Zugriff haben, öffnen oder klonen Sie das Repository lokal.
+Erstellen Sie für einen Beitrag zunächst einen Fork des Repositorys. Arbeiten
+Sie ausschliesslich in diesem Fork. Ein direkter Schreibzugriff auf das
+Original-Repository wird nicht benötigt.
 
 Beispiel:
 
@@ -35,16 +43,22 @@ Die wichtigsten Bereiche sind:
   fachliche Erklärung der Validierungslogik
 - `docs/validierung-mit-github-actions.md`  
   Erklärung des GitHub-Validierungsablaufs
+- `docs/repository-housekeeping.md`
+  verbindliche Regeln für Ablage, Statuswechsel und Verantwortlichkeiten
+- `docs/strukturvorlage-schritt-fuer-schritt.md`
+  vollständiger Ablauf von der Vorlage bis zum Pull Request
 - `templates/2026_09_Strukturvorlage_Data_Dictionary_leer_v1.1.0.xlsx`
   aktuelle leere Strukturvorlage
-- `WIP data dictionaries/IFMA/Strukturvorlage_AreaMgmt_v0.6.0.xlsx`
-  ausgefülltes IFMA Data Dictionary in Bearbeitung
+- `WIP data dictionaries/IFMA/CHE.5539 IFMA_Data Template_AreaMgmt_v0.9.5.xlsx`
+  aktuelles IFMA Data Dictionary in Bearbeitung
 - `WIP data dictionaries/KBOB/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx`
   ausgefülltes KBOB Data Dictionary in Bearbeitung
 - `scripts/validator/run_github_validation.py`  
   GitHub-kompatibler Einstiegspunkt für die Validierung
 - `scripts/validator/validate_strukturvorlage.py`  
   zentrale Validierungslogik
+- `validator_tests/`
+  automatisierte Regressionstests des Validators; keine Ablage für Data Dictionaries
 
 Die leeren Vorlagen verbleiben unter `templates/`. Ausgefüllte Data Dictionaries werden nach Bearbeitungsstatus (`WIP`, `SHARED`, `PUBLISHED`, `ARCHIVED`) und danach nach verantwortlicher Organisation abgelegt.
 
@@ -58,7 +72,7 @@ Verwenden Sie für neue Arbeiten die aktuelle leere Startvorlage:
 
 Wenn Sie zuerst verstehen möchten, wie eine ausgefüllte Datei aussieht, öffnen Sie je nach Bedarf eines der Beispiele:
 
-- `WIP data dictionaries/IFMA/Strukturvorlage_AreaMgmt_v0.6.0.xlsx`
+- `WIP data dictionaries/IFMA/CHE.5539 IFMA_Data Template_AreaMgmt_v0.9.5.xlsx`
 - `WIP data dictionaries/KBOB/Strukturvorlage_DataDictionary_KBOB_FM_v0.9.5.xlsx`
 
 Auch diese beiden Beispiel-Dateien müssen mit den leeren Vorlagen synchron bleiben.
@@ -97,6 +111,9 @@ Grundablauf:
 2. GitHub Action **Validate Data Dictionary** starten
 3. bei Bedarf `workbook_path` auf Ihre Datei setzen
 4. Bericht und validierte Artefakt-`.xlsx` herunterladen und prüfen
+
+System-generierte Felder werden erst dann in die validierte Artefaktdatei
+geschrieben, wenn keine Blocking Errors mehr vorhanden sind.
 
 ## 8. Berichte lesen
 
