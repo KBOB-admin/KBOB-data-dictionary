@@ -31,6 +31,7 @@ Es soll Benutzern helfen,
 - `docs/strukturvorlage-schritt-fuer-schritt.md`
 - `docs/repository-housekeeping.md`
 - `docs/Leitfaden_Strukturvorlage_Housekeeping_und_Anleitung.pdf`
+- `docs/Leitfaden_Strukturvorlage_Housekeeping_und_Anleitung.docx`
 
 ### Für die Arbeit mit Excel-Dateien
 

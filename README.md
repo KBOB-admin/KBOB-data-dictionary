@@ -41,6 +41,7 @@ Innerhalb jedes Statusbereichs werden die Dateien nach verantwortlicher Organisa
 - maschinenlesbare **Validierungsberichte und validierte Arbeitsmappen** als GitHub-Artefakte
 - verbindliche [Housekeeping- und Ablageregeln](docs/repository-housekeeping.md)
 - einen zusammengeführten [PDF-Leitfaden](docs/Leitfaden_Strukturvorlage_Housekeeping_und_Anleitung.pdf)
+- eine bearbeitbare [Word-Fassung](docs/Leitfaden_Strukturvorlage_Housekeeping_und_Anleitung.docx)
 
 Der Ordner [`validator_tests/`](validator_tests/) enthält ausschliesslich
 automatisierte Regressionstests für den Validator. Data-Dictionary-Dateien
